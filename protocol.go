@@ -19,6 +19,8 @@ const (
 	OperationResourceRead   = "resource.read"
 )
 
+const AgentDockUIResourcePrefix = "ui://agentdock/"
+
 const (
 	ContextUIResourceURI      = "ui://agentdock/context"
 	TaskProgressUIResourceURI = "ui://agentdock/task-progress"
