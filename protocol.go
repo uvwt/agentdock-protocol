@@ -17,6 +17,14 @@ const (
 	OperationContextLocal   = "context.local"
 	OperationToolCall       = "tool.call"
 	OperationResourceRead   = "resource.read"
+	OperationArtifactRead   = "artifact.read"
+)
+
+const (
+	// ArtifactReadCapability is the frozen Bridge capability token for private Artifact reads.
+	ArtifactReadCapability = "bridge.artifact.read.v1"
+	// MaxArtifactChunkBytes bounds one raw Artifact chunk before JSON/base64 encoding on the Bridge.
+	MaxArtifactChunkBytes = 512 << 10
 )
 
 const AgentDockUIResourcePrefix = "ui://agentdock/"

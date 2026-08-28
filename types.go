@@ -17,15 +17,16 @@ type Message struct {
 
 // Hello is the complete node capability snapshot sent at connection time.
 type Hello struct {
-	DeviceID         string                 `json:"device_id"`
-	Version          string                 `json:"version"`
-	ProtocolVersion  string                 `json:"protocol_version"`
-	OS               string                 `json:"os"`
-	Arch             string                 `json:"arch"`
-	Capabilities     []string               `json:"capabilities"`
-	ToolContractHash string                 `json:"tool_contract_hash"`
-	Tools            []ToolDescriptor       `json:"tools"`
-	UIResources      []UIResourceCapability `json:"ui_resources"`
+	DeviceID           string                 `json:"device_id"`
+	Version            string                 `json:"version"`
+	ProtocolVersion    string                 `json:"protocol_version"`
+	OS                 string                 `json:"os"`
+	Arch               string                 `json:"arch"`
+	Capabilities       []string               `json:"capabilities"`
+	BridgeCapabilities []string               `json:"bridge_capabilities,omitempty"`
+	ToolContractHash   string                 `json:"tool_contract_hash"`
+	Tools              []ToolDescriptor       `json:"tools"`
+	UIResources        []UIResourceCapability `json:"ui_resources"`
 }
 
 // ToolDescriptor is the Bridge projection of an MCP tool descriptor.

@@ -32,8 +32,10 @@ func TestHelloRoundTripKeepsUIResourcesSeparateFromToolMeta(t *testing.T) {
 		Type:            MessageNodeHello,
 		ProtocolVersion: ConnectionProtocolVersion,
 		Hello: &Hello{
-			DeviceID:        "device_abcdefgh",
-			ProtocolVersion: ConnectionProtocolVersion,
+			DeviceID:           "device_abcdefgh",
+			ProtocolVersion:    ConnectionProtocolVersion,
+			Capabilities:       []string{"read_file"},
+			BridgeCapabilities: []string{ArtifactReadCapability},
 			Tools: []ToolDescriptor{{
 				Name:        "workflow_template_manage",
 				InputSchema: map[string]any{"type": "object"},
@@ -56,6 +58,12 @@ func TestHelloRoundTripKeepsUIResourcesSeparateFromToolMeta(t *testing.T) {
 	}
 	if len(decoded.Hello.UIResources) != 1 || decoded.Hello.UIResources[0].URI != WorkflowUIResourceURI {
 		t.Fatalf("decoded ui_resources = %#v", decoded.Hello.UIResources)
+	}
+	if len(decoded.Hello.Capabilities) != 1 || decoded.Hello.Capabilities[0] != "read_file" {
+		t.Fatalf("decoded capabilities = %#v", decoded.Hello.Capabilities)
+	}
+	if len(decoded.Hello.BridgeCapabilities) != 1 || decoded.Hello.BridgeCapabilities[0] != ArtifactReadCapability {
+		t.Fatalf("decoded bridge_capabilities = %#v", decoded.Hello.BridgeCapabilities)
 	}
 	if decoded.Hello.Tools[0].Meta != nil {
 		t.Fatalf("workflow tool unexpectedly carries static UI meta: %#v", decoded.Hello.Tools[0].Meta)
