@@ -2,7 +2,6 @@ package mcpcontract
 
 const (
 	ToolAgentDockContext       = "agentdock_context"
-	ToolRecallBootstrap        = "recall_bootstrap"
 	ToolRecallSearch           = "recall_search"
 	ToolRecallRead             = "recall_read"
 	ToolRecallWrite            = "recall_write"
@@ -13,7 +12,6 @@ const (
 
 var toolNames = []string{
 	ToolAgentDockContext,
-	ToolRecallBootstrap,
 	ToolRecallSearch,
 	ToolRecallRead,
 	ToolRecallWrite,
@@ -45,7 +43,7 @@ func AnnotationContract(name string) (Annotations, bool) {
 	readOnly := false
 	destructive := true
 	switch name {
-	case ToolAgentDockContext, ToolRecallBootstrap, ToolRecallSearch, ToolRecallRead:
+	case ToolAgentDockContext, ToolRecallSearch, ToolRecallRead:
 		readOnly = true
 		destructive = false
 	case ToolRecallWrite, ToolRecallMaintain, ToolPrivateNoteManage, ToolWorkflowTemplateManage:

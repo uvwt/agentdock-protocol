@@ -6,10 +6,6 @@ func InputSchema(name string) (map[string]any, bool) {
 	var required []string
 	switch name {
 	case ToolAgentDockContext:
-	case ToolRecallBootstrap:
-		props["max_bytes"] = integerProperty("Maximum combined NexusDock Recall pack bytes. Does not expose section bodies by itself; use include_body or recall_read when body text is needed.")
-		props["include_raw"] = booleanProperty("Include raw Markdown as raw_content. Defaults to false to avoid duplicating body/content tokens.")
-		props["include_body"] = booleanProperty("Include section body text in recall_bootstrap. Defaults to false; prefer recall_read for targeted full text.")
 	case ToolRecallSearch:
 		props["query"] = stringProperty("Text query to search in NexusDock Recall files and paths.")
 		props["kind"] = enumProperty("Search kind. Defaults to all.", "all", "markdown", "card")

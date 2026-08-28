@@ -7,8 +7,8 @@ import (
 )
 
 func TestCanonicalToolContractsAreCompleteAndFresh(t *testing.T) {
-	if got := len(ToolNames()); got != 8 {
-		t.Fatalf("tool count = %d, want 8", got)
+	if got := len(ToolNames()); got != 7 {
+		t.Fatalf("tool count = %d, want 7", got)
 	}
 	for _, name := range ToolNames() {
 		input, ok := InputSchema(name)
@@ -55,7 +55,7 @@ func TestInputSchemasNeverSerializeNullRequired(t *testing.T) {
 		}
 	}
 
-	for _, name := range []string{ToolAgentDockContext, ToolRecallBootstrap, ToolRecallMaintain} {
+	for _, name := range []string{ToolAgentDockContext, ToolRecallMaintain} {
 		schema, _ := InputSchema(name)
 		if _, exists := schema["required"]; exists {
 			t.Fatalf("%s should omit empty required", name)

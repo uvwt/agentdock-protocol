@@ -5,12 +5,6 @@ package mcpcontract
 func OutputSchema(name string) (map[string]any, bool) {
 	props := map[string]any{}
 	switch name {
-	case ToolRecallBootstrap:
-		props["recall_endpoint"] = stringProperty("NexusDock Recall endpoint.")
-		props["project"] = stringProperty("Backend-selected Recall context; not an input selector for the model.")
-		props["sections"] = arrayObjects("Packed Recall sections. Raw Markdown is returned only when include_raw=true.")
-		props["count"] = integerProperty("Section count.")
-		props["bytes"] = integerProperty("Combined bytes.")
 	case ToolRecallSearch:
 		props["recall_endpoint"] = stringProperty("NexusDock Recall endpoint.")
 		props["recall_kind"] = stringProperty("Search kind used.")
