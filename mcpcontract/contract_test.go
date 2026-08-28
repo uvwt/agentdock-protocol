@@ -92,8 +92,19 @@ func TestPrivateNoteMissingEncryptedIsStringArray(t *testing.T) {
 func TestContextHasExplicitLocalAndFleetProfiles(t *testing.T) {
 	local := LocalAgentDockContextOutputSchema()
 	fleet := FleetAgentDockContextOutputSchema()
-	if _, ok := local["properties"].(map[string]any)["skills"]; !ok {
+	localProperties := local["properties"].(map[string]any)
+	if _, ok := localProperties["skills"]; !ok {
 		t.Fatal("local context is missing skills")
+	}
+	runtimeSchema, ok := localProperties["runtime"].(map[string]any)
+	if !ok {
+		t.Fatal("local context is missing runtime")
+	}
+	runtimeProperties := runtimeSchema["properties"].(map[string]any)
+	for _, name := range []string{"version", "os", "arch", "agentdock_home", "agentdock_default_dir", "default_cwd", "path_model"} {
+		if _, ok := runtimeProperties[name]; !ok {
+			t.Fatalf("local runtime is missing %s", name)
+		}
 	}
 	if _, ok := fleet["properties"].(map[string]any)["nodes"]; !ok {
 		t.Fatal("fleet context is missing nodes")

@@ -118,7 +118,8 @@ func OutputSchema(name string) (map[string]any, bool) {
 
 func LocalAgentDockContextOutputSchema() map[string]any {
 	props := localContextProperties(true)
-	return strictObject(props, "skills", "dynamic_mcp", "workflow_templates", "rules")
+	props["runtime"] = agentDockRuntimeSchema()
+	return strictObject(props, "runtime", "skills", "dynamic_mcp", "workflow_templates", "rules")
 }
 
 func FleetAgentDockContextOutputSchema() map[string]any {
@@ -189,6 +190,18 @@ func localContextProperties(includeShared bool) map[string]any {
 		}, "enabled", "items")
 	}
 	return props
+}
+
+func agentDockRuntimeSchema() map[string]any {
+	return strictObject(map[string]any{
+		"version":               stringProperty("AgentDock runtime version."),
+		"os":                    stringProperty("Host operating system."),
+		"arch":                  stringProperty("Host architecture."),
+		"agentdock_home":        stringProperty("AgentDock state and configuration directory."),
+		"agentdock_default_dir": stringProperty("AgentDock default working directory."),
+		"default_cwd":           stringProperty("Default cwd relative to the AgentDock working directory when applicable."),
+		"path_model":            stringProperty("Path resolution model used by host tools."),
+	}, "version", "os", "arch", "agentdock_home", "agentdock_default_dir", "default_cwd", "path_model")
 }
 
 func contextItemSchema(requireDescription bool) map[string]any {
