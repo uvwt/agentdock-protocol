@@ -160,6 +160,19 @@ func localContextProperties(includeShared bool) map[string]any {
 			"file": stringProperty("skill:// URI for the active SKILL.md."), "bundled": booleanProperty("Whether the Skill is bundled by AgentDock."),
 		}, "required": []string{"name", "description", "file"}, "additionalProperties": false,
 	}
+	commonSkill := map[string]any{
+		"type": "object", "properties": map[string]any{
+			"name": stringProperty("Common Skill name."), "description": stringProperty("Short capability description."),
+			"file": stringProperty("Host path to the common SKILL.md."),
+		}, "required": []string{"name", "description", "file"}, "additionalProperties": false,
+	}
+	commonSkills := strictObject(map[string]any{
+		"root":      stringProperty("Common Agent Skills root path."),
+		"total":     integerProperty("Total valid common Skills discovered before truncation."),
+		"truncated": booleanProperty("Whether the common Skill index was truncated."),
+		"items":     map[string]any{"type": "array", "items": commonSkill},
+	}, "root", "total", "truncated", "items")
+	commonSkills["description"] = "Lower-priority common Agent Skill capability index; installed AgentDock Skills take precedence on conflicts."
 	dynamicItem := contextItemSchema(true)
 	indexItem := contextItemSchema(false)
 	warning := map[string]any{
@@ -168,8 +181,9 @@ func localContextProperties(includeShared bool) map[string]any {
 		}, "required": []string{"source", "message"}, "additionalProperties": false,
 	}
 	props := map[string]any{
-		"skills":      map[string]any{"type": "array", "description": "Installed document Skill capability index.", "items": skill},
-		"dynamic_mcp": map[string]any{"type": "array", "description": "Enabled dynamic MCP server capability index.", "items": dynamicItem},
+		"skills":        map[string]any{"type": "array", "description": "Installed document Skill capability index.", "items": skill},
+		"common_skills": commonSkills,
+		"dynamic_mcp":   map[string]any{"type": "array", "description": "Enabled dynamic MCP server capability index.", "items": dynamicItem},
 		"acp": strictObject(map[string]any{
 			"enabled": booleanProperty("Whether ACP is enabled."), "agent": stringProperty("Configured ACP agent name."), "description": stringProperty("Short ACP usage orientation."),
 		}, "enabled", "agent", "description"),
