@@ -96,6 +96,27 @@ func TestContextHasExplicitLocalAndFleetProfiles(t *testing.T) {
 	if _, ok := localProperties["skills"]; !ok {
 		t.Fatal("local context is missing skills")
 	}
+	commonSkills, ok := localProperties["common_skills"].(map[string]any)
+	if !ok {
+		t.Fatal("local context is missing common_skills")
+	}
+	commonProperties := commonSkills["properties"].(map[string]any)
+	for _, name := range []string{"root", "total", "truncated", "items"} {
+		if _, ok := commonProperties[name]; !ok {
+			t.Fatalf("common_skills is missing %s", name)
+		}
+	}
+	for _, required := range local["required"].([]string) {
+		if required == "common_skills" {
+			t.Fatal("common_skills must remain optional for rolling compatibility with older AgentDock nodes")
+		}
+	}
+	nodes := fleet["properties"].(map[string]any)["nodes"].(map[string]any)
+	node := nodes["items"].(map[string]any)
+	nodeContext := node["properties"].(map[string]any)["context"].(map[string]any)
+	if _, ok := nodeContext["properties"].(map[string]any)["common_skills"]; !ok {
+		t.Fatal("fleet node context is missing common_skills")
+	}
 	runtimeSchema, ok := localProperties["runtime"].(map[string]any)
 	if !ok {
 		t.Fatal("local context is missing runtime")
