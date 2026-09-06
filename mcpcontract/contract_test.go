@@ -130,6 +130,17 @@ func TestContextHasExplicitLocalAndFleetProfiles(t *testing.T) {
 	if _, ok := fleet["properties"].(map[string]any)["nodes"]; !ok {
 		t.Fatal("fleet context is missing nodes")
 	}
+	dynamicMCP := localProperties["dynamic_mcp"].(map[string]any)
+	dynamicItem := dynamicMCP["items"].(map[string]any)
+	dynamicProperties := dynamicItem["properties"].(map[string]any)
+	for _, name := range []string{"name", "description", "status", "tool_count", "last_error_code"} {
+		if _, ok := dynamicProperties[name]; !ok {
+			t.Fatalf("dynamic MCP context item is missing %s", name)
+		}
+	}
+	if dynamicItem["additionalProperties"] != false {
+		t.Fatalf("dynamic MCP context item must remain strict: %#v", dynamicItem)
+	}
 	if reflect.DeepEqual(local, fleet) {
 		t.Fatal("local and fleet context profiles unexpectedly match")
 	}
