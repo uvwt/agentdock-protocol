@@ -173,7 +173,7 @@ func localContextProperties(includeShared bool) map[string]any {
 		"items":     map[string]any{"type": "array", "items": commonSkill},
 	}, "root", "total", "truncated", "items")
 	commonSkills["description"] = "Lower-priority common Agent Skill capability index; installed AgentDock Skills take precedence on conflicts."
-	dynamicItem := contextItemSchema(true)
+	dynamicItem := dynamicMCPItemSchema()
 	indexItem := contextItemSchema(false)
 	warning := map[string]any{
 		"type": "object", "properties": map[string]any{
@@ -226,4 +226,16 @@ func contextItemSchema(requireDescription bool) map[string]any {
 		"required":             required,
 		"additionalProperties": false,
 	}
+}
+
+func dynamicMCPItemSchema() map[string]any {
+	schema := contextItemSchema(true)
+	properties := schema["properties"].(map[string]any)
+	properties["status"] = map[string]any{
+		"type": "string", "description": "Runtime health state: idle, ready, or error.",
+		"enum": []string{"idle", "ready", "error"},
+	}
+	properties["tool_count"] = integerProperty("Discovered tool count from the latest successful refresh.")
+	properties["last_error_code"] = stringProperty("Safe machine-readable code for the latest refresh error.")
+	return schema
 }
