@@ -91,3 +91,45 @@ func TestHTMLLocalizesFromBrowserAndHostLocale(t *testing.T) {
 		}
 	}
 }
+
+func TestHTMLZhCNPreservesHistoricalMixedTerminology(t *testing.T) {
+	html := HTML("agentdock_context", "Context")
+	start := strings.Index(html, `"zh-CN":{`)
+	end := strings.Index(html, `const matchLocale=value=>`)
+	if start < 0 || end <= start {
+		t.Fatal("shared MCP App zh-CN message dictionary is missing")
+	}
+	zhCN := html[start:end]
+
+	// zh-CN 保持 i18n 前已经成熟的中英混排；协议、产品和结构字段不做机械中文化。
+	for _, marker := range []string{
+		`status:"STATUS"`,
+		`workflow:"Workflow"`,
+		`capabilities:"Capabilities"`,
+		`devices:"Devices"`,
+		`artifact:"Artifact"`,
+		`type:"Type"`,
+		`action_task:"TASK"`,
+		`state_pending:"pending"`,
+		`moreItems:"还有 {count} 项"`,
+		`online:"在线"`,
+		`unavailable:"不可用"`,
+		`contextUnavailable:"Context 暂不可用"`,
+	} {
+		if !strings.Contains(zhCN, marker) {
+			t.Fatalf("shared MCP App zh-CN copy drifted from historical UI: missing %q", marker)
+		}
+	}
+
+	for _, forbidden := range []string{
+		`status:"状态"`,
+		`workflow:"工作流"`,
+		`capabilities:"能力"`,
+		`artifact:"产物"`,
+		`action_task:"任务"`,
+	} {
+		if strings.Contains(zhCN, forbidden) {
+			t.Fatalf("shared MCP App zh-CN copy is over-translated: %q", forbidden)
+		}
+	}
+}
