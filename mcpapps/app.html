@@ -36,11 +36,56 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
   const pendingRequests=new Map();
   const systemTheme=typeof window.matchMedia==="function"?window.matchMedia("(prefers-color-scheme: dark)"):null;
   let hostTheme="";
+  let lastData=null;
+  const messages={
+    en:{
+      waiting:"Waiting for tool output…",item:"Item",step:"Step",status:"STATUS",moreItems:"{count} more",
+      noRecallMatches:"No Recall matches.",noMatches:"No matches",recallEntry:"Recall entry",recallCard:"Recall card",
+      noChanges:"No changes",previewOnly:"Preview only",written:"Written",completed:"Completed",recallUpdated:"Recall updated",
+      items:"{count} items",workflowMatch:"Workflow match",score:"score {score}",candidates:"{count} candidates",candidate:"Candidate",noWorkflowMatches:"No workflow matches.",
+      result:"Result",content:"Content",mcpTool:"MCP tool",externalMcp:"external MCP",server:"Server",tool:"Tool",contentCount:"{count} content",externalMcpVia:"External MCP via {server}",externalMcpInvoked:"External MCP tool invoked",
+      artifact:"Artifact",file:"file",temporaryLink:"temporary link",type:"Type",size:"Size",dimensions:"Dimensions",artifactId:"Artifact ID",expires:"Expires",signedUrl:"Signed URL",published:"published",updated:"Updated",state:"State",statusLabel:"Status",path:"Path",
+      agentDockSkills:"AgentDock Skills",commonSkills:"Common Skills",workflow:"Workflow",recall:"Recall",capabilities:"Capabilities",devices:"Devices",online:"Online",on:"ON",off:"OFF",
+      unavailable:"Unavailable",contextUnavailable:"Context unavailable",nodeOffline:"AgentDock node is offline",nodeUnavailable:"{name} is currently unavailable",
+      tasks:"{count} tasks",noTasks:"No tasks.",steps:"{done} / {total} steps",review:"review {status}",sessions:"{count} sessions",noAcpSessions:"No ACP sessions.",session:"Session",authenticated:"authenticated",deleted:"deleted",noMessages:"No user or assistant messages in this AgentDock process.",
+      dryRun:"dry run",noChange:"no change",previewTruncated:"preview truncated",noChangeSentence:"No change.",fileChange:"File change",unableInitialize:"Unable to initialize MCP App.",
+      action_search:"SEARCH",action_write:"WRITE",action_match:"MATCH",action_call:"CALL",action_publish:"PUBLISH",action_context:"CONTEXT",action_list:"LIST",action_task:"TASK",action_change:"CHANGE",action_move:"MOVE",action_status:"STATUS",
+      state_pending:"pending",state_in_progress:"in progress",state_completed:"completed",state_blocked:"blocked",state_active:"active",state_running:"running",state_success:"success",state_error:"error",state_failed:"failed",state_online:"online",state_offline:"offline",state_unavailable:"unavailable",state_enabled:"enabled",state_disabled:"disabled",state_ready:"ready",state_configured:"configured",state_exited:"exited",state_killed:"killed",state_timeout:"timeout",state_live:"live"
+    },
+    "zh-CN":{
+      waiting:"等待工具输出…",item:"项目",step:"步骤",status:"状态",moreItems:"还有 {count} 项",
+      noRecallMatches:"没有匹配的 Recall 内容。",noMatches:"没有匹配结果",recallEntry:"Recall 条目",recallCard:"Recall 卡片",
+      noChanges:"无变更",previewOnly:"仅预览",written:"已写入",completed:"已完成",recallUpdated:"Recall 已更新",
+      items:"{count} 项",workflowMatch:"工作流匹配",score:"分数 {score}",candidates:"{count} 个候选",candidate:"候选项",noWorkflowMatches:"没有匹配的工作流。",
+      result:"结果",content:"内容",mcpTool:"MCP 工具",externalMcp:"外部 MCP",server:"服务",tool:"工具",contentCount:"{count} 项内容",externalMcpVia:"通过 {server} 调用外部 MCP",externalMcpInvoked:"已调用外部 MCP 工具",
+      artifact:"产物",file:"文件",temporaryLink:"临时链接",type:"类型",size:"大小",dimensions:"尺寸",artifactId:"产物 ID",expires:"过期时间",signedUrl:"签名 URL",published:"已发布",updated:"更新时间",state:"状态",statusLabel:"状态",path:"路径",
+      agentDockSkills:"AgentDock Skills",commonSkills:"Common Skills",workflow:"工作流",recall:"Recall",capabilities:"能力",devices:"设备",online:"在线",on:"开启",off:"关闭",
+      unavailable:"不可用",contextUnavailable:"上下文暂不可用",nodeOffline:"AgentDock 节点当前离线",nodeUnavailable:"{name} 当前不可用",
+      tasks:"{count} 个任务",noTasks:"暂无任务。",steps:"{done} / {total} 步",review:"评审 {status}",sessions:"{count} 个会话",noAcpSessions:"暂无 ACP 会话。",session:"会话",authenticated:"已认证",deleted:"已删除",noMessages:"当前 AgentDock 进程中没有用户或助手消息。",
+      dryRun:"试运行",noChange:"无变更",previewTruncated:"预览已截断",noChangeSentence:"无变更。",fileChange:"文件变更",unableInitialize:"无法初始化 MCP App。",
+      action_search:"搜索",action_write:"写入",action_match:"匹配",action_call:"调用",action_publish:"发布",action_context:"上下文",action_list:"列表",action_task:"任务",action_change:"变更",action_move:"移动",action_status:"状态",
+      state_pending:"待处理",state_in_progress:"进行中",state_completed:"已完成",state_blocked:"已阻塞",state_active:"活动",state_running:"运行中",state_success:"成功",state_error:"错误",state_failed:"失败",state_online:"在线",state_offline:"离线",state_unavailable:"不可用",state_enabled:"已启用",state_disabled:"已停用",state_ready:"就绪",state_configured:"已配置",state_exited:"已退出",state_killed:"已终止",state_timeout:"超时",state_live:"活动"
+    }
+  };
+  const matchLocale=value=>{
+    const candidate=String(value||"").trim().toLowerCase();
+    if(candidate==="en"||candidate.startsWith("en-"))return "en";
+    if(candidate==="zh"||candidate==="zh-cn"||candidate==="zh-sg"||candidate==="zh-hans"||candidate.startsWith("zh-hans-"))return "zh-CN";
+    return "";
+  };
+  const resolveLocale=values=>{for(const value of values){const matched=matchLocale(value);if(matched)return matched}return "en"};
+  let locale=resolveLocale([...(navigator.languages||[]),navigator.language]);
+  const messageFor=key=>messages[locale][key]??messages.en[key];
+  const t=(key,vars={})=>{let text=messageFor(key)??key;for(const [name,value] of Object.entries(vars))text=text.replaceAll("{"+name+"}",String(value));return text};
+  const stateLabel=value=>{const raw=String(value||"");return messageFor("state_"+raw)??raw.replaceAll("_"," ")};
+  const actionLabel=value=>{const raw=String(value||"");return messageFor("action_"+raw)??raw.replaceAll("_"," ").toUpperCase()};
+  const applyLocale=value=>{const next=resolveLocale([value]);if(locale===next)return;locale=next;document.documentElement.lang=locale;if(lastData){lastSerialized="";render(lastData)}};
+  document.documentElement.lang=locale;
 
   const el=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=String(text);return node};
   const isObject=value=>value!==null&&typeof value==="object"&&!Array.isArray(value);
   const scalar=value=>value===null||["string","number","boolean"].includes(typeof value);
-  const actionLabel=value=>String(value||"").replaceAll("_"," ").toUpperCase();
+  root.textContent=t("waiting");
 
   function preferredTheme(){return systemTheme&&systemTheme.matches?"dark":"light"}
   function applyTheme(theme){
@@ -58,6 +103,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     if(Object.prototype.hasOwnProperty.call(context,"theme")){
       hostTheme=context.theme==="light"||context.theme==="dark"?context.theme:"";
     }
+    if(Object.prototype.hasOwnProperty.call(context,"locale")||Object.prototype.hasOwnProperty.call(context,"language"))applyLocale(context.locale||context.language);
     if(isObject(context.styles))applyHostVariables(context.styles.variables);
     applyTheme(hostTheme||preferredTheme());
   }
@@ -129,7 +175,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
       const statusClass=status==="in_progress"?"in-progress":status;
       if(status==="completed"||status==="in_progress"||status==="blocked")reached=index;
       const node=el("span","progress-node "+statusClass);
-      node.title=(step.title||step.id||"Step")+" · "+status;
+      node.title=(step.title||step.id||t("step"))+" · "+stateLabel(status);
       progress.append(node);index++;
     }
     if(!index)return null;
@@ -142,7 +188,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
 
   function headline(fragment,action,primary,secondary){
     const line=el("div","headline");
-    line.append(el("strong","action",actionLabel(action)||"STATUS"));
+    line.append(el("strong","action",actionLabel(action)||t("status")));
     if(primary)line.append(el("span","path",primary));
     if(secondary){line.append(el("span","arrow","→"));line.append(el("span","path",secondary))}
     fragment.append(line);
@@ -177,7 +223,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
 
   function contextItems(items){
     if(!Array.isArray(items))return [];
-    return items.filter(isObject).map(item=>({name:String(item.name||"Item"),description:String(item.description||"")}));
+    return items.filter(isObject).map(item=>({name:String(item.name||t("item")),description:String(item.description||"")}));
   }
 
   function contextPill(value,label,className){
@@ -202,11 +248,11 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
       const list=el("div","context-list");
       for(const item of items.slice(0,limit)){
         const row=el("div","context-item");
-        row.append(el("div","context-name",item.name||"Item"));
+        row.append(el("div","context-name",item.name||t("item")));
         if(item.description)row.append(el("div","context-desc",item.description));
         list.append(row);
       }
-      if(items.length>limit)list.append(el("div","context-more","还有 "+(items.length-limit)+" 项"));
+      if(items.length>limit)list.append(el("div","context-more",t("moreItems",{count:items.length-limit})));
       section.append(list);
     }
     parent.append(section);
@@ -225,7 +271,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     for(const item of items){
       if(!isObject(item))continue;
       const row=el("div","result-item");
-      row.append(el("div","result-name",item.title||item.name||item.id||item.path||"Item"));
+      row.append(el("div","result-name",item.title||item.name||item.id||item.path||t("item")));
       const side=el("div","result-side");
       if(item.dotStatus){
         const state=String(item.dotStatus).toLowerCase();
@@ -294,16 +340,16 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
   function recallTitle(data){
     if(data.query)return data.query;
     if(data.path)return data.path.split("/").filter(Boolean).pop()||data.path;
-    if(isObject(data.recall))return data.recall.title||data.recall.path||"Recall entry";
-    if(isObject(data.card))return data.card.title||data.card.path||"Recall card";
+    if(isObject(data.recall))return data.recall.title||data.recall.path||t("recallEntry");
+    if(isObject(data.card))return data.card.title||data.card.path||t("recallCard");
     return "Recall";
   }
 
   function recallWriteState(data){
-    if(data.dry_run===true)return data.changed===false?"No changes":"Preview only";
-    if(data.written===true)return "Written";
-    if(data.changed===false)return "No changes";
-    return "Completed";
+    if(data.dry_run===true)return data.changed===false?t("noChanges"):t("previewOnly");
+    if(data.written===true)return t("written");
+    if(data.changed===false)return t("noChanges");
+    return t("completed");
   }
 
   function renderRecall(data){
@@ -311,7 +357,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     const title=recallTitle(data);
     if(Array.isArray(data.results)){
       const count=Number(data.count??data.results.length);
-      const meta=[data.recall_kind||"",count+" items"].filter(Boolean).join(" · ");
+      const meta=[data.recall_kind||"",t("items",{count})].filter(Boolean).join(" · ");
       headline(fragment,"search",title);
       metaLine(fragment,[meta]);
       resultList(fragment,data.results.map(item=>isObject(item)?{
@@ -319,9 +365,9 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
         badge:item.frontmatter&&item.frontmatter.type?item.frontmatter.type:"",
         description:item.snippet||"",
         path:item.path||""
-      }:item),"No Recall matches.");
+      }:item),t("noRecallMatches"));
       const first=data.results.find(isObject);
-      const preview=first?first.snippet||first.title||first.path||"":"No matches";
+      const preview=first?first.snippet||first.title||first.path||"":t("noMatches");
       const footer=compactResultFooter(preview,meta);
       compactShell({action:"search",title,className:"result-toggle"},footer?[footer]:[],fragment);
       return;
@@ -337,46 +383,46 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     const card=isObject(data.card)?data.card:null;
     if(recall){
       metricStrip(fragment,[
-        {label:"Type",value:recall.frontmatter&&recall.frontmatter.type||target},
-        {label:"Updated",value:recall.frontmatter&&recall.frontmatter.updated_at||""},
-        {label:"State",value:state}
+        {label:t("type"),value:recall.frontmatter&&recall.frontmatter.type||target},
+        {label:t("updated"),value:recall.frontmatter&&recall.frontmatter.updated_at||""},
+        {label:t("state"),value:state}
       ]);
       const body=recall.content||recall.body||recall.summary;
       if(body)fragment.append(el("div","recall-body",body));
     }else if(card){
       metricStrip(fragment,[
-        {label:"Type",value:card.card_type||card.type||target},
-        {label:"Status",value:card.status||""},
-        {label:"State",value:state}
+        {label:t("type"),value:card.card_type||card.type||target},
+        {label:t("statusLabel"),value:stateLabel(card.status||"")},
+        {label:t("state"),value:state}
       ]);
       if(card.content||card.body)fragment.append(el("div","recall-body",card.content||card.body));
     }
-    detailFields(fragment,[{label:"Path",value:data.path||recall&&recall.path||card&&card.path,mono:true}]);
+    detailFields(fragment,[{label:t("path"),value:data.path||recall&&recall.path||card&&card.path,mono:true}]);
     if(Array.isArray(data.warnings)&&data.warnings.length)fragment.append(el("div","result-note",data.warnings.join(" · ")));
     if(typeof data.diff==="string"&&data.diff)appendDiffPreview(fragment,data.diff);
 
     const compactRows=[];
     if(data.path)compactRows.push(el("span","compact-path",data.path));
-    const footer=compactResultFooter(state==="Written"?"Recall updated":state,[target,action].filter(Boolean).join(" · "));
+    const footer=compactResultFooter(data.written===true?t("recallUpdated"):state,[target,actionLabel(action)].filter(Boolean).join(" · "));
     if(footer)compactRows.push(footer);
     compactShell({action,title,className:"result-toggle"},compactRows,fragment);
   }
 
   function workflowMatchTitle(data){
-    if(Array.isArray(data.candidates)){const first=data.candidates.find(isObject);if(first)return first.title||first.id||"Workflow match"}
-    return "Workflow match";
+    if(Array.isArray(data.candidates)){const first=data.candidates.find(isObject);if(first)return first.title||first.id||t("workflowMatch")}
+    return t("workflowMatch");
   }
 
   function renderWorkflow(data){
     const fragment=document.createDocumentFragment();
     const title=workflowMatchTitle(data);
-    const meta=[data.recommended||"",data.best_candidate_score!==undefined?"score "+data.best_candidate_score:"",data.count!==undefined?data.count+" candidates":""].filter(Boolean).join(" · ");
+    const meta=[data.recommended||"",data.best_candidate_score!==undefined?t("score",{score:data.best_candidate_score}):"",data.count!==undefined?t("candidates",{count:data.count}):""].filter(Boolean).join(" · ");
     headline(fragment,"match",title);
     metaLine(fragment,[meta]);
     if(data.recommendation_reason)fragment.append(el("p","summary",data.recommendation_reason));
     resultList(fragment,Array.isArray(data.candidates)?data.candidates.map(item=>isObject(item)?{
-      title:item.title||item.id||"Candidate",score:item.score!==undefined?String(item.score):"",description:item.reason||item.description||"",path:item.id||""
-    }:item):[],"No workflow matches.");
+      title:item.title||item.id||t("candidate"),score:item.score!==undefined?String(item.score):"",description:item.reason||item.description||"",path:item.id||""
+    }:item):[],t("noWorkflowMatches"));
     let preview=data.recommendation_reason||"";
     if(!preview&&Array.isArray(data.candidates)){const first=data.candidates.find(isObject);if(first)preview=first.reason||first.description||first.title||first.id||""}
     const footer=compactResultFooter(preview||title,meta);
@@ -387,14 +433,14 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     if(!isObject(result))return;
     const content=Array.isArray(result.content)?result.content:[];
     const text=content.filter(isObject).filter(item=>item.type==="text"&&typeof item.text==="string").map(item=>item.text.trim()).filter(Boolean).join("\n\n");
-    if(text)appendTextOutput(fragment,"Result",text);
+    if(text)appendTextOutput(fragment,t("result"),text);
     if(!text&&result.structuredContent!==undefined&&result.structuredContent!==null){
       let serialized="";
       try{serialized=JSON.stringify(result.structuredContent,null,2)}catch{serialized=String(result.structuredContent)}
-      appendTextOutput(fragment,"Result",serialized);
+      appendTextOutput(fragment,t("result"),serialized);
     }
     const attachments=content.filter(isObject).filter(item=>item.type!=="text").map(item=>({
-      title:item.name||item.uri||item.mimeType||item.type||"Content",
+      title:item.name||item.uri||item.mimeType||item.type||t("content"),
       badge:item.type||"",description:item.mimeType||""
     }));
     if(attachments.length)resultList(fragment,attachments,"");
@@ -402,38 +448,38 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
 
   function renderDynamicMCP(data){
     const fragment=document.createDocumentFragment();
-    const title=data.name||"MCP tool";
+    const title=data.name||t("mcpTool");
     const callResult=isObject(data.result)?data.result:{};
     const content=Array.isArray(callResult.content)?callResult.content:[];
-    const status=callResult.isError===true?"error":"success";
+    const status=callResult.isError===true?stateLabel("error"):stateLabel("success");
     const separator=title.indexOf(":");
     const server=separator>0?title.slice(0,separator):"";
     const tool=separator>0?title.slice(separator+1):title;
     headline(fragment,"call",title);
-    metaLine(fragment,["external MCP",status]);
-    detailFields(fragment,[{label:"Server",value:server,mono:true},{label:"Tool",value:tool,mono:true}]);
+    metaLine(fragment,[t("externalMcp"),status]);
+    detailFields(fragment,[{label:t("server"),value:server,mono:true},{label:t("tool"),value:tool,mono:true}]);
     appendMCPCallResult(fragment,callResult);
-    const meta=[status,content.length?content.length+" content":""].filter(Boolean).join(" · ");
-    const footer=compactResultFooter(server?"External MCP via "+server:"External MCP tool invoked",meta);
+    const meta=[status,content.length?t("contentCount",{count:content.length}):""].filter(Boolean).join(" · ");
+    const footer=compactResultFooter(server?t("externalMcpVia",{server}):t("externalMcpInvoked"),meta);
     compactShell({action:"call",title,className:"result-toggle"},footer?[footer]:[],fragment);
   }
 
   function renderArtifact(data){
     const fragment=document.createDocumentFragment();
-    const title=data.filename||data.artifact_id||"Artifact";
-    const type=data.archive===true?"tar.gz":data.mime_type||"file";
+    const title=data.filename||data.artifact_id||t("artifact");
+    const type=data.archive===true?"tar.gz":data.mime_type||t("file");
     headline(fragment,"publish",title);
-    metaLine(fragment,[data.expires_at?"temporary link":"",data.artifact_id||""]);
+    metaLine(fragment,[data.expires_at?t("temporaryLink"):"",data.artifact_id||""]);
     metricStrip(fragment,[
-      {label:"Type",value:type},{label:"Size",value:humanBytes(data.size_bytes)},{label:"Dimensions",value:data.width&&data.height?data.width+" × "+data.height:""}
+      {label:t("type"),value:type},{label:t("size"),value:humanBytes(data.size_bytes)},{label:t("dimensions"),value:data.width&&data.height?data.width+" × "+data.height:""}
     ]);
     detailFields(fragment,[
-      {label:"Artifact ID",value:data.artifact_id,mono:true},{label:"Expires",value:data.expires_at},{label:"SHA-256",value:data.sha256,mono:true},{label:"Signed URL",value:data.url,href:data.url,mono:true}
+      {label:t("artifactId"),value:data.artifact_id,mono:true},{label:t("expires"),value:data.expires_at},{label:"SHA-256",value:data.sha256,mono:true},{label:t("signedUrl"),value:data.url,href:data.url,mono:true}
     ]);
     const compactRows=[];
     const meta=[type,humanBytes(data.size_bytes),data.width&&data.height?data.width+"×"+data.height:""].filter(Boolean).join(" · ");
     if(meta)compactRows.push(el("span","compact-meta-row",meta));
-    const footer=compactResultFooter(data.expires_at?"temporary link":"published",data.artifact_id||"");
+    const footer=compactResultFooter(data.expires_at?t("temporaryLink"):t("published"),data.artifact_id||"");
     if(footer)compactRows.push(footer);
     compactShell({action:"publish",title,className:"result-toggle"},compactRows,fragment);
   }
@@ -448,18 +494,18 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     const recall=isObject(data.recall)&&data.recall.enabled;
 
     const overview=el("div","context-overview");
-    appendContextOverview(overview,skills.length,"AgentDock Skills");
+    appendContextOverview(overview,skills.length,t("agentDockSkills"));
     appendContextOverview(overview,mcps.length,"MCP");
-    appendContextOverview(overview,workflows.length,"Workflow");
-    appendContextOverview(overview,recall?"ON":"OFF","Recall");
+    appendContextOverview(overview,workflows.length,t("workflow"));
+    appendContextOverview(overview,recall?t("on"):t("off"),t("recall"));
     parent.append(overview);
 
     const groups=el("div","context-groups");
-    appendContextSection(groups,"AgentDock Skills",skills,10);
-    appendContextSection(groups,"Common Skills",commonSkills,10);
+    appendContextSection(groups,t("agentDockSkills"),skills,10);
+    appendContextSection(groups,t("commonSkills"),commonSkills,10);
     appendContextSection(groups,"MCP",mcps,8);
     appendContextSection(groups,"ACP",acp,4);
-    appendContextSection(groups,"Workflow",workflows,8);
+    appendContextSection(groups,t("workflow"),workflows,8);
     parent.append(groups);
     return{skills,mcps,workflows,recall};
   }
@@ -468,8 +514,8 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     const fragment=document.createDocumentFragment();
     const summary=appendNodeAgentContext(fragment,data);
     const compact=el("span","compact-context");
-    compact.append(contextPill(summary.skills.length,"AgentDock Skills"),contextPill(summary.mcps.length,"MCP"),contextPill(summary.workflows.length,"Workflow","workflow"),contextPill(summary.recall?"ON":"OFF","Recall"));
-    compactShell({action:"context",title:"Capabilities"},[compact],fragment);
+    compact.append(contextPill(summary.skills.length,t("agentDockSkills")),contextPill(summary.mcps.length,"MCP"),contextPill(summary.workflows.length,t("workflow"),"workflow"),contextPill(summary.recall?t("on"):t("off"),t("recall")));
+    compactShell({action:"context",title:t("capabilities")},[compact],fragment);
   }
 
   function renderFleetAgentContext(data){
@@ -491,8 +537,8 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
       content.replaceChildren();
       if(!isObject(node.context)||node.error){
         const unavailable=el("div","context-node-unavailable");
-        unavailable.append(el("strong","",String(node.name||node.node_id||"AgentDock")+" 当前不可用"));
-        unavailable.append(el("span","",String(node.error||(node.online===true?"Context 暂不可用":"AgentDock 节点当前离线"))));
+        unavailable.append(el("strong","",t("nodeUnavailable",{name:String(node.name||node.node_id||"AgentDock")})));
+        unavailable.append(el("span","",String(node.error||(node.online===true?t("contextUnavailable"):t("nodeOffline")))));
         content.append(unavailable);
         requestAnimationFrame(reportSize);
         return;
@@ -515,22 +561,22 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
       const button=el("button","context-node-tab");
       button.type="button";
       button.setAttribute("aria-pressed","false");
-      const status=node.error?"不可用":(node.online===true?"在线":"离线");
+      const status=node.error?t("unavailable"):(node.online===true?t("online"):stateLabel("offline"));
       button.append(el("span","context-node-tab-name",node.name||node.node_id||"AgentDock"));
       button.append(el("span","context-node-tab-status",status));
       button.addEventListener("click",()=>selectNode(index));
       buttons.push(button);tabs.append(button);
     }
     const fleetOverview=el("div","context-overview fleet-overview");
-    appendContextOverview(fleetOverview,nodes.length,"Devices");
-    appendContextOverview(fleetOverview,online,"Online");
+    appendContextOverview(fleetOverview,nodes.length,t("devices"));
+    appendContextOverview(fleetOverview,online,t("online"));
     fragment.append(tabs,fleetOverview,content);
 
     const workflowCount=contextItems(shared.workflow_templates).length;
     const recallEnabled=isObject(shared.recall)&&shared.recall.enabled;
     const compact=el("span","compact-context");
-    compact.append(contextPill(nodes.length,"Devices"),contextPill(online,"Online"),contextPill(workflowCount,"Workflow"),contextPill(recallEnabled?"ON":"OFF","Recall"));
-    compactShell({action:"context",title:"Capabilities"},[compact],fragment);
+    compact.append(contextPill(nodes.length,t("devices")),contextPill(online,t("online")),contextPill(workflowCount,t("workflow")),contextPill(recallEnabled?t("on"):t("off"),t("recall")));
+    compactShell({action:"context",title:t("capabilities")},[compact],fragment);
     const initialIndex=Math.max(0,nodes.findIndex(node=>node.online===true&&isObject(node.context)&&!node.error));
     if(nodes.length)selectNode(initialIndex);
   }
@@ -544,34 +590,34 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     const fragment=document.createDocumentFragment();
     if(Array.isArray(data.tasks)){
       const count=Number(data.count??data.tasks.length);
-      headline(fragment,data.action||"list",String(count)+" tasks");
+      headline(fragment,data.action||"list",t("tasks",{count}));
       const rows=el("div","rows");
       for(const task of data.tasks){
         if(!isObject(task))continue;
         const row=el("div","row");
-        row.append(el("div","row-title",task.title||task.id||"Task"));
-        row.append(el("div","row-status",task.status||""));
+        row.append(el("div","row-title",task.title||task.id||t("action_task")));
+        row.append(el("div","row-status",stateLabel(task.status||"")));
         const current=isObject(task.current_step)?task.current_step:null;
         if(current)row.append(el("div","row-sub",current.title||current.id||""));
         rows.append(row);
       }
-      if(rows.childNodes.length)fragment.append(rows);else fragment.append(el("div","empty","No tasks."));
+      if(rows.childNodes.length)fragment.append(rows);else fragment.append(el("div","empty",t("noTasks")));
       const first=data.tasks.find(task=>isObject(task));
       const current=first&&isObject(first.current_step)?first.current_step:null;
       const listMeta=current?(current.title||current.id||""):first?(first.status||""):"";
       const listRow=listMeta?el("span","compact-summary",listMeta):null;
-      compactShell({action:data.action||"list",title:String(count)+" tasks"},[listRow],fragment);return;
+      compactShell({action:data.action||"list",title:t("tasks",{count})},[listRow],fragment);return;
     }
 
     const task=taskRecord(data);
-    const title=task.title||task.id||data.task_id||"Task";
+    const title=task.title||task.id||data.task_id||t("action_task");
     const completed=Number(task.completed_step_count||0),total=Number(task.step_count||0);
     let steps=Array.isArray(task.steps)?task.steps:[];
     if(!steps.length&&isObject(task.current_step))steps=[task.current_step];
     headline(fragment,data.action||"task",title);
-    metaLine(fragment,[task.status||task.phase||data.review_status,total>0?completed+" / "+total+" steps":"",data.final_review&&data.final_review.status?"review "+data.final_review.status:""]);
+    metaLine(fragment,[stateLabel(task.status||task.phase||data.review_status),total>0?t("steps",{done:completed,total}):"",data.final_review&&data.final_review.status?t("review",{status:stateLabel(data.final_review.status)}):""]);
     if(typeof task.summary==="string"&&task.summary)fragment.append(el("p","summary",task.summary));
-    if(steps.length){const list=el("div","steps");for(const step of steps){if(!isObject(step))continue;const status=String(step.status||"pending");const statusClass=status==="in_progress"?"in-progress":status;const row=el("div","step "+statusClass);const marker=el("div","step-marker",status==="completed"?"✓":status==="in_progress"?"●":status==="blocked"?"!":"");row.append(marker);row.append(el("div","step-title",step.title||step.id||"Step"));row.append(el("div","step-status",status));list.append(row)}fragment.append(list)}
+    if(steps.length){const list=el("div","steps");for(const step of steps){if(!isObject(step))continue;const status=String(step.status||"pending");const statusClass=status==="in_progress"?"in-progress":status;const row=el("div","step "+statusClass);const marker=el("div","step-marker",status==="completed"?"✓":status==="in_progress"?"●":status==="blocked"?"!":"");row.append(marker);row.append(el("div","step-title",step.title||step.id||t("step")));row.append(el("div","step-status",stateLabel(status)));list.append(row)}fragment.append(list)}
     const activeStep=steps.find(step=>isObject(step)&&(step.status==="in_progress"||step.status==="blocked"))||(isObject(task.current_step)?task.current_step:null);
     const compactRows=[];
     if(typeof task.summary==="string"&&task.summary)compactRows.push(el("span","compact-summary",task.summary));
@@ -579,11 +625,11 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     if(progress){
       const progressRow=el("span","compact-progress-row");
       progressRow.append(progress);
-      const progressMeta=[activeStep?(activeStep.title||activeStep.id||""):"",total>0?completed+" / "+total:task.status||task.phase||""].filter(Boolean).join(" · ");
+      const progressMeta=[activeStep?(activeStep.title||activeStep.id||""):"",total>0?t("steps",{done:completed,total}):stateLabel(task.status||task.phase||"")].filter(Boolean).join(" · ");
       if(progressMeta)progressRow.append(el("span","compact-progress-meta",progressMeta));
       compactRows.push(progressRow);
     }else if(activeStep||total>0){
-      compactRows.push(el("span","compact-meta-row",[activeStep?(activeStep.title||activeStep.id||""):"",total>0?completed+" / "+total:""].filter(Boolean).join(" · ")));
+      compactRows.push(el("span","compact-meta-row",[activeStep?(activeStep.title||activeStep.id||""):"",total>0?t("steps",{done:completed,total}):""].filter(Boolean).join(" · ")));
     }
     compactShell({action:data.action||"task",title},compactRows,fragment);
   }
@@ -595,21 +641,21 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     const insertions=Number.isFinite(Number(data.insertions))?"+"+Number(data.insertions):"";
     const deletions=Number.isFinite(Number(data.deletions))?"−"+Number(data.deletions):"";
     const detailMeta=el("div","meta");
-    for(const value of [data.dry_run===true?"dry run":"",data.changed===false?"no change":"",data.truncated===true?"preview truncated":""].filter(Boolean))detailMeta.append(el("span","",value));
+    for(const value of [data.dry_run===true?t("dryRun"):"",data.changed===false?t("noChange"):"",data.truncated===true?t("previewTruncated"):""].filter(Boolean))detailMeta.append(el("span","",value));
     if(insertions)detailMeta.append(el("span","compact-file-stat add",insertions));
     if(deletions)detailMeta.append(el("span","compact-file-stat del",deletions));
     if(detailMeta.childNodes.length)fragment.append(detailMeta);
     if(typeof data.diff_preview==="string"&&data.diff_preview)appendDiffPreview(fragment,data.diff_preview);
-    else if(data.changed===false)fragment.append(el("div","empty","No change."));
+    else if(data.changed===false)fragment.append(el("div","empty",t("noChangeSentence")));
     const normalizedPrimary=String(primary||"").replaceAll("\\","/");
-    const fileName=normalizedPrimary.split("/").filter(Boolean).pop()||"File change";
+    const fileName=normalizedPrimary.split("/").filter(Boolean).pop()||t("fileChange");
     const compactRows=[];
     if(primary){
       const pathText=data.action==="move"&&data.new_path?primary+" → "+data.new_path:primary;
       compactRows.push(el("span","compact-path",pathText));
     }
     const fileRow=el("span","compact-file-row");
-    const fileState=[data.dry_run===true?"dry run":"",data.changed===false?"no change":"",data.truncated===true?"preview truncated":""].filter(Boolean).join(" · ");
+    const fileState=[data.dry_run===true?t("dryRun"):"",data.changed===false?t("noChange"):"",data.truncated===true?t("previewTruncated"):""].filter(Boolean).join(" · ");
     fileRow.append(el("span","compact-file-state",fileState));
     const stats=el("span","compact-file-stats");
     if(insertions)stats.append(el("span","compact-file-stat add",insertions));
@@ -629,25 +675,25 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     const state=isObject(data.state)?data.state:data;
     const fragment=document.createDocumentFragment();
     if(Array.isArray(state.sessions)){
-      headline(fragment,state.action||"list",String(state.count??state.sessions.length)+" sessions");
+      headline(fragment,state.action||"list",t("sessions",{count:String(state.count??state.sessions.length)}));
       const rows=el("div","rows");
       for(const session of state.sessions){
         if(!isObject(session))continue;
         const row=el("div","row");
-        row.append(el("div","row-title",session.id||session.session_id||"Session"));
-        row.append(el("div","row-status",session.status||""));
+        row.append(el("div","row-title",session.id||session.session_id||t("session")));
+        row.append(el("div","row-status",stateLabel(session.status||"")));
         if(session.cwd)row.append(el("div","row-sub",session.cwd));
         rows.append(row);
       }
-      if(rows.childNodes.length)fragment.append(rows);else fragment.append(el("div","empty","No ACP sessions."));
+      if(rows.childNodes.length)fragment.append(rows);else fragment.append(el("div","empty",t("noAcpSessions")));
       const first=state.sessions.find(session=>isObject(session));
       const listMeta=first?[first.status||"",first.agent||"",first.cwd||""].filter(Boolean).join(" · "):"";
-      compactShell({action:state.action||"list",title:String(state.count??state.sessions.length)+" sessions"},[listMeta?el("span","compact-summary",listMeta):null],fragment);return;
+      compactShell({action:state.action||"list",title:t("sessions",{count:String(state.count??state.sessions.length)})},[listMeta?el("span","compact-summary",listMeta):null],fragment);return;
     }
     const session=isObject(state.session)?state.session:{};
     const identity=acpSessionID(state)||session.agent||(isObject(state.agent)?state.agent.name||state.agent.title:"")||"ACP";
     headline(fragment,state.action||"status",identity);
-    metaLine(fragment,[session.status||state.status,state.authenticated===true?"authenticated":"",session.agent||"",session.mode_id||state.mode_id||"",state.deleted===true?"deleted":""]);
+    metaLine(fragment,[stateLabel(session.status||state.status),state.authenticated===true?t("authenticated"):"",session.agent||"",session.mode_id||state.mode_id||"",state.deleted===true?t("deleted"):""]);
     if(session.cwd)fragment.append(el("div","path",session.cwd));
     if(Array.isArray(state.messages)){
       const messages=el("div","messages");
@@ -658,7 +704,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
         item.append(el("div","message-text",message.content));
         messages.append(item);
       }
-      if(messages.childNodes.length)fragment.append(messages);else fragment.append(el("div","empty","No user or assistant messages in this AgentDock process."));
+      if(messages.childNodes.length)fragment.append(messages);else fragment.append(el("div","empty",t("noMessages")));
       const compactRows=[];
       const latest=[...state.messages].reverse().find(message=>isObject(message)&&(message.role==="user"||message.role==="assistant")&&typeof message.content==="string"&&message.content);
       if(latest)compactRows.push(el("span","compact-summary",latest.content));
@@ -692,7 +738,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
 
   function render(data){
     if(!renderable(data))return;
-    const serialized=JSON.stringify(data);if(serialized===lastSerialized)return;lastSerialized=serialized;
+    lastData=data;const serialized=locale+"|"+JSON.stringify(data);if(serialized===lastSerialized)return;lastSerialized=serialized;
     if(expectedView==="agentdock_context")renderAgentContext(data);
     else if(expectedView==="task_progress")renderTask(data);
     else if(expectedView==="file_change")renderFileChange(data);
@@ -738,7 +784,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
       rpcNotify("ui/notifications/initialized",{});
       startAutoResize();
     }catch(_){
-      root.textContent="Unable to initialize MCP App.";
+      root.textContent=t("unableInitialize");
     }
   }
 
