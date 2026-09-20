@@ -38,6 +38,7 @@ const (
 	DynamicMCPUIResourceURI   = "ui://agentdock/dynamic-mcp"
 	ArtifactUIResourceURI     = "ui://agentdock/artifact"
 	ACPStatusUIResourceURI    = "ui://agentdock/acp-status"
+	ImageUIResourceURI        = "ui://agentdock/view-image/v1.html"
 )
 
 const (
@@ -49,6 +50,7 @@ const (
 	DynamicMCPUIContract   = "agentdock.dynamic-mcp.v1"
 	ArtifactUIContract     = "agentdock.artifact.v1"
 	ACPStatusUIContract    = "agentdock.acp-status.v1"
+	ImageUIContract        = "agentdock.view-image.v1"
 )
 
 const MCPAppMIMEType = "text/html;profile=mcp-app"
@@ -57,6 +59,8 @@ const MCPAppMIMEType = "text/html;profile=mcp-app"
 // URIs identify resources and remain stable; renderer compatibility evolves through the contract string.
 func UIResourceContract(uri string) (string, bool) {
 	switch uri {
+	case ImageUIResourceURI:
+		return ImageUIContract, true
 	case ContextUIResourceURI:
 		return ContextUIContract, true
 	case TaskProgressUIResourceURI:
