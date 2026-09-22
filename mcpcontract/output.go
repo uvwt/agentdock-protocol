@@ -129,8 +129,11 @@ func WorkspaceContextOutputSchema() map[string]any {
 	skill := strictObject(map[string]any{
 		"name":        stringProperty("Workspace Skill name."),
 		"description": stringProperty("Short workspace Skill capability description."),
-		"file":        stringProperty("Host path to the workspace-local SKILL.md."),
-	}, "name", "description", "file")
+		"file":        stringProperty("Exact skill:// resource URI for the workspace-local SKILL.md."),
+		"skill_ref":   stringProperty("Exact host-issued Skill reference for runtime binding."),
+		"source_type": enumProperty("Skill source type.", "workspace"),
+		"source_id":   stringProperty("Opaque workspace source identity issued by the host."),
+	}, "name", "description", "file", "skill_ref", "source_type", "source_id")
 	warning := strictObject(map[string]any{
 		"source":  stringProperty("Workspace context section identifier."),
 		"message": stringProperty("Safe warning message."),
@@ -191,14 +194,22 @@ func localContextProperties(includeShared bool) map[string]any {
 	skill := map[string]any{
 		"type": "object", "properties": map[string]any{
 			"name": stringProperty("Skill name."), "description": stringProperty("Short capability description."),
-			"file": stringProperty("skill:// URI for the active SKILL.md."), "bundled": booleanProperty("Whether the Skill is bundled by AgentDock."),
-		}, "required": []string{"name", "description", "file"}, "additionalProperties": false,
+			"file":           stringProperty("Exact skill:// resource URI for SKILL.md."),
+			"skill_ref":      stringProperty("Exact host-issued Skill reference for runtime binding."),
+			"source_type":    enumProperty("Skill source type.", "managed"),
+			"source_id":      stringProperty("Opaque source identity issued by the host."),
+			"content_digest": stringProperty("Current package content digest when the source has immutable managed content."),
+		}, "required": []string{"name", "description", "file", "skill_ref", "source_type", "source_id"}, "additionalProperties": false,
 	}
 	commonSkill := map[string]any{
 		"type": "object", "properties": map[string]any{
 			"name": stringProperty("Common Skill name."), "description": stringProperty("Short capability description."),
-			"file": stringProperty("Host path to the common SKILL.md."),
-		}, "required": []string{"name", "description", "file"}, "additionalProperties": false,
+			"file":           stringProperty("Exact skill:// resource URI for the common SKILL.md."),
+			"skill_ref":      stringProperty("Exact host-issued Skill reference for runtime binding."),
+			"source_type":    enumProperty("Skill source type.", "shared"),
+			"source_id":      stringProperty("Opaque shared source identity issued by the host."),
+			"content_digest": stringProperty("Optional content digest when the host can provide one."),
+		}, "required": []string{"name", "description", "file", "skill_ref", "source_type", "source_id"}, "additionalProperties": false,
 	}
 	commonSkills := strictObject(map[string]any{
 		"root":      stringProperty("Common Agent Skills root path."),
