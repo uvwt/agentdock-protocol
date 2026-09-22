@@ -99,6 +99,17 @@ func TestWorkspaceContextHasCanonicalDirectAndNodeProfiles(t *testing.T) {
 	if output["additionalProperties"] != false {
 		t.Fatalf("workspace_context output must be strict: %#v", output)
 	}
+	workspaceSkills := properties["workspace_skills"].(map[string]any)
+	workspaceSkill := workspaceSkills["items"].(map[string]any)
+	workspaceSkillProps := workspaceSkill["properties"].(map[string]any)
+	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type", "source_id"} {
+		if _, ok := workspaceSkillProps[name]; !ok {
+			t.Fatalf("workspace Skill provenance is missing %s", name)
+		}
+	}
+	if got := workspaceSkillProps["source_type"].(map[string]any)["enum"]; !reflect.DeepEqual(got, []string{"workspace"}) {
+		t.Fatalf("workspace Skill source_type enum = %#v", got)
+	}
 }
 
 func TestWorkflowRootIsStrictButTemplatePayloadIsOpen(t *testing.T) {
@@ -143,6 +154,26 @@ func TestContextHasExplicitLocalAndFleetProfiles(t *testing.T) {
 		if _, ok := commonProperties[name]; !ok {
 			t.Fatalf("common_skills is missing %s", name)
 		}
+	}
+	managedSkill := localProperties["skills"].(map[string]any)["items"].(map[string]any)
+	managedSkillProps := managedSkill["properties"].(map[string]any)
+	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type", "source_id", "content_digest"} {
+		if _, ok := managedSkillProps[name]; !ok {
+			t.Fatalf("managed Skill provenance is missing %s", name)
+		}
+	}
+	if got := managedSkillProps["source_type"].(map[string]any)["enum"]; !reflect.DeepEqual(got, []string{"managed"}) {
+		t.Fatalf("managed Skill source_type enum = %#v", got)
+	}
+	commonSkill := commonProperties["items"].(map[string]any)["items"].(map[string]any)
+	commonSkillProps := commonSkill["properties"].(map[string]any)
+	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type", "source_id", "content_digest"} {
+		if _, ok := commonSkillProps[name]; !ok {
+			t.Fatalf("common Skill provenance is missing %s", name)
+		}
+	}
+	if got := commonSkillProps["source_type"].(map[string]any)["enum"]; !reflect.DeepEqual(got, []string{"shared"}) {
+		t.Fatalf("common Skill source_type enum = %#v", got)
 	}
 	for _, required := range local["required"].([]string) {
 		if required == "common_skills" {
