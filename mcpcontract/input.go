@@ -6,6 +6,8 @@ func InputSchema(name string) (map[string]any, bool) {
 	var required []string
 	switch name {
 	case ToolAgentDockContext:
+	case ToolWorkspaceContext:
+		props["workdir"] = stringProperty("Workspace directory to inspect for this request only. Omit it to use AgentDock's default working directory.")
 	case ToolRecallSearch:
 		props["query"] = stringProperty("Text query to search in NexusDock Recall files and paths.")
 		props["kind"] = enumProperty("Search kind. Defaults to all.", "all", "markdown", "card")
@@ -78,4 +80,15 @@ func InputSchema(name string) (map[string]any, bool) {
 		return nil, false
 	}
 	return strictObject(props, required...), true
+}
+
+// NodeWorkspaceContextInputSchema is the canonical Nexus-facing input profile.
+// Nexus adds only node selection; workdir keeps the same request-local semantics
+// as direct AgentDock and is forwarded unchanged to the selected node.
+func NodeWorkspaceContextInputSchema() map[string]any {
+	schema, _ := InputSchema(ToolWorkspaceContext)
+	properties := schema["properties"].(map[string]any)
+	properties["node_id"] = stringProperty("Target AgentDock node ID from agentdock_context.")
+	schema["required"] = []string{"node_id"}
+	return schema
 }

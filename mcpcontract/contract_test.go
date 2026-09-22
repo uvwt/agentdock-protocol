@@ -7,8 +7,8 @@ import (
 )
 
 func TestCanonicalToolContractsAreCompleteAndFresh(t *testing.T) {
-	if got := len(ToolNames()); got != 7 {
-		t.Fatalf("tool count = %d, want 7", got)
+	if got := len(ToolNames()); got != 8 {
+		t.Fatalf("tool count = %d, want 8", got)
 	}
 	for _, name := range ToolNames() {
 		input, ok := InputSchema(name)
@@ -55,11 +55,49 @@ func TestInputSchemasNeverSerializeNullRequired(t *testing.T) {
 		}
 	}
 
-	for _, name := range []string{ToolAgentDockContext, ToolRecallMaintain} {
+	for _, name := range []string{ToolAgentDockContext, ToolWorkspaceContext, ToolRecallMaintain} {
 		schema, _ := InputSchema(name)
 		if _, exists := schema["required"]; exists {
 			t.Fatalf("%s should omit empty required", name)
 		}
+	}
+}
+
+func TestWorkspaceContextHasCanonicalDirectAndNodeProfiles(t *testing.T) {
+	direct, ok := InputSchema(ToolWorkspaceContext)
+	if !ok {
+		t.Fatal("workspace_context direct input schema missing")
+	}
+	directProperties := direct["properties"].(map[string]any)
+	if _, ok := directProperties["workdir"]; !ok {
+		t.Fatal("workspace_context direct input is missing workdir")
+	}
+	if _, ok := directProperties["node_id"]; ok {
+		t.Fatal("direct workspace_context must not expose node_id")
+	}
+
+	node := NodeWorkspaceContextInputSchema()
+	nodeProperties := node["properties"].(map[string]any)
+	if _, ok := nodeProperties["workdir"]; !ok {
+		t.Fatal("node workspace_context is missing workdir")
+	}
+	if _, ok := nodeProperties["node_id"]; !ok {
+		t.Fatal("node workspace_context is missing node_id")
+	}
+	required := node["required"].([]string)
+	if !reflect.DeepEqual(required, []string{"node_id"}) {
+		t.Fatalf("node workspace_context required = %#v", required)
+	}
+
+	output := WorkspaceContextOutputSchema()
+	properties := output["properties"].(map[string]any)
+	for _, name := range []string{"workdir", "workspace_root", "instructions", "workspace_skills", "warnings"} {
+		if _, ok := properties[name]; !ok {
+			t.Fatalf("workspace_context output missing %s", name)
+		}
+	}
+	if output["additionalProperties"] != false {
+		t.Fatalf("workspace_context output must be strict: %#v", output)
 	}
 }
 
