@@ -5,6 +5,8 @@ package mcpcontract
 func OutputSchema(name string) (map[string]any, bool) {
 	props := map[string]any{}
 	switch name {
+	case ToolWorkspaceContext:
+		return WorkspaceContextOutputSchema(), true
 	case ToolRecallSearch:
 		props["recall_endpoint"] = stringProperty("NexusDock Recall endpoint.")
 		props["recall_kind"] = stringProperty("Search kind used.")
@@ -108,6 +110,38 @@ func OutputSchema(name string) (map[string]any, bool) {
 		return nil, false
 	}
 	return map[string]any{"type": "object", "properties": props, "required": []string{}, "additionalProperties": true}, true
+}
+
+// WorkspaceContextOutputSchema is shared unchanged by direct AgentDock and the
+// Nexus node-scoped route. Nexus selects the node in the input and forwards the
+// selected node's workspace result without inventing a second result shape.
+func WorkspaceContextOutputSchema() map[string]any {
+	instruction := strictObject(map[string]any{
+		"scope":        enumProperty("Instruction scope.", "global", "workspace"),
+		"path":         stringProperty("Host path to the AGENTS.md candidate."),
+		"status":       enumProperty("Load status.", "loaded", "not_found", "empty", "duplicate", "skipped", "error"),
+		"content":      stringProperty("Complete instruction text when status=loaded."),
+		"sha256":       stringProperty("SHA-256 of the complete source bytes when status=loaded."),
+		"size_bytes":   integerProperty("Source size in bytes when known."),
+		"reason":       stringProperty("Machine-readable reason when the file was skipped or could not be loaded."),
+		"duplicate_of": stringProperty("Earlier physical file path when status=duplicate."),
+	}, "scope", "path", "status")
+	skill := strictObject(map[string]any{
+		"name":        stringProperty("Workspace Skill name."),
+		"description": stringProperty("Short workspace Skill capability description."),
+		"file":        stringProperty("Host path to the workspace-local SKILL.md."),
+	}, "name", "description", "file")
+	warning := strictObject(map[string]any{
+		"source":  stringProperty("Workspace context section identifier."),
+		"message": stringProperty("Safe warning message."),
+	}, "source", "message")
+	return strictObject(map[string]any{
+		"workdir":          stringProperty("Resolved workspace directory inspected for this request."),
+		"workspace_root":   stringProperty("Workspace inheritance root used for AGENTS.md and .agents/skills discovery."),
+		"instructions":     map[string]any{"type": "array", "items": instruction},
+		"workspace_skills": map[string]any{"type": "array", "items": skill},
+		"warnings":         map[string]any{"type": "array", "items": warning},
+	}, "workdir", "workspace_root", "instructions", "workspace_skills", "warnings")
 }
 
 func LocalAgentDockContextOutputSchema() map[string]any {
