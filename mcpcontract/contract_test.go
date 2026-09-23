@@ -157,13 +157,13 @@ func TestContextHasExplicitLocalAndFleetProfiles(t *testing.T) {
 	}
 	managedSkill := localProperties["skills"].(map[string]any)["items"].(map[string]any)
 	managedSkillProps := managedSkill["properties"].(map[string]any)
-	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type", "source_id", "content_digest"} {
+	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type", "source_id", "plugin_name", "content_digest"} {
 		if _, ok := managedSkillProps[name]; !ok {
-			t.Fatalf("managed Skill provenance is missing %s", name)
+			t.Fatalf("managed/plugin Skill provenance is missing %s", name)
 		}
 	}
-	if got := managedSkillProps["source_type"].(map[string]any)["enum"]; !reflect.DeepEqual(got, []string{"managed"}) {
-		t.Fatalf("managed Skill source_type enum = %#v", got)
+	if got := managedSkillProps["source_type"].(map[string]any)["enum"]; !reflect.DeepEqual(got, []string{"managed", "plugin"}) {
+		t.Fatalf("managed/plugin Skill source_type enum = %#v", got)
 	}
 	commonSkill := commonProperties["items"].(map[string]any)["items"].(map[string]any)
 	commonSkillProps := commonSkill["properties"].(map[string]any)
@@ -202,10 +202,13 @@ func TestContextHasExplicitLocalAndFleetProfiles(t *testing.T) {
 	dynamicMCP := localProperties["dynamic_mcp"].(map[string]any)
 	dynamicItem := dynamicMCP["items"].(map[string]any)
 	dynamicProperties := dynamicItem["properties"].(map[string]any)
-	for _, name := range []string{"name", "description", "status", "tool_count", "last_error_code"} {
+	for _, name := range []string{"name", "display_name", "description", "source_type", "plugin_name", "status", "tool_count", "last_error_code"} {
 		if _, ok := dynamicProperties[name]; !ok {
 			t.Fatalf("dynamic MCP context item is missing %s", name)
 		}
+	}
+	if got := dynamicProperties["source_type"].(map[string]any)["enum"]; !reflect.DeepEqual(got, []string{"standalone", "plugin"}) {
+		t.Fatalf("dynamic MCP source_type enum = %#v", got)
 	}
 	if dynamicItem["additionalProperties"] != false {
 		t.Fatalf("dynamic MCP context item must remain strict: %#v", dynamicItem)
