@@ -45,7 +45,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
       items:"{count} items",workflowMatch:"Workflow match",score:"score {score}",candidates:"{count} candidates",candidate:"Candidate",noWorkflowMatches:"No workflow matches.",
       result:"Result",content:"Content",mcpTool:"MCP tool",externalMcp:"external MCP",server:"Server",tool:"Tool",contentCount:"{count} content",externalMcpVia:"External MCP via {server}",externalMcpInvoked:"External MCP tool invoked",
       artifact:"Artifact",file:"file",temporaryLink:"temporary link",type:"Type",size:"Size",dimensions:"Dimensions",artifactId:"Artifact ID",expires:"Expires",signedUrl:"Signed URL",published:"published",updated:"Updated",state:"State",statusLabel:"Status",path:"Path",
-      agentDockSkills:"AgentDock Skills",commonSkills:"Common Skills",plugins:"Plugins",defaultProfile:"Default",workflow:"Workflow",recall:"Recall",capabilities:"Capabilities",devices:"Devices",online:"Online",on:"ON",off:"OFF",
+      agentDockSkills:"AgentDock Skills",skills:"Skills",commonSkills:"Common Skills",plugins:"Plugins",defaultProfile:"Default",workflow:"Workflow",recall:"Recall",capabilities:"Capabilities",devices:"Devices",online:"Online",on:"ON",off:"OFF",
       unavailable:"Unavailable",contextUnavailable:"Context unavailable",nodeOffline:"AgentDock node is offline",nodeUnavailable:"{name} is currently unavailable",
       tasks:"{count} tasks",noTasks:"No tasks.",steps:"{done} / {total} steps",review:"review {status}",sessions:"{count} sessions",noAcpSessions:"No ACP sessions.",session:"Session",authenticated:"authenticated",deleted:"deleted",noMessages:"No user or assistant messages in this AgentDock process.",
       dryRun:"dry run",noChange:"no change",previewTruncated:"preview truncated",noChangeSentence:"No change.",fileChange:"File change",unableInitialize:"Unable to initialize MCP App.",
@@ -59,7 +59,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
       items:"{count} items",workflowMatch:"Workflow match",score:"score {score}",candidates:"{count} candidates",candidate:"Candidate",noWorkflowMatches:"No workflow matches.",
       result:"Result",content:"Content",mcpTool:"MCP tool",externalMcp:"external MCP",server:"Server",tool:"Tool",contentCount:"{count} content",externalMcpVia:"External MCP via {server}",externalMcpInvoked:"External MCP tool invoked",
       artifact:"Artifact",file:"file",temporaryLink:"temporary link",type:"Type",size:"Size",dimensions:"Dimensions",artifactId:"Artifact ID",expires:"Expires",signedUrl:"Signed URL",published:"published",updated:"Updated",state:"State",statusLabel:"Status",path:"Path",
-      agentDockSkills:"AgentDock Skills",commonSkills:"Common Skills",plugins:"Plugins",defaultProfile:"默认",workflow:"Workflow",recall:"Recall",capabilities:"Capabilities",devices:"Devices",online:"在线",on:"ON",off:"OFF",
+      agentDockSkills:"AgentDock Skills",skills:"Skills",commonSkills:"Common Skills",plugins:"Plugins",defaultProfile:"默认",workflow:"Workflow",recall:"Recall",capabilities:"Capabilities",devices:"Devices",online:"在线",on:"ON",off:"OFF",
       unavailable:"不可用",contextUnavailable:"Context 暂不可用",nodeOffline:"AgentDock 节点当前离线",nodeUnavailable:"{name} 当前不可用",
       tasks:"{count} tasks",noTasks:"No tasks.",steps:"{done} / {total} steps",review:"review {status}",sessions:"{count} sessions",noAcpSessions:"No ACP sessions.",session:"Session",authenticated:"authenticated",deleted:"deleted",noMessages:"No user or assistant messages in this AgentDock process.",
       dryRun:"dry run",noChange:"no change",previewTruncated:"preview truncated",noChangeSentence:"No change.",fileChange:"File change",unableInitialize:"Unable to initialize MCP App.",
@@ -544,7 +544,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     const fragment=document.createDocumentFragment();
     const summary=appendNodeAgentContext(fragment,data);
     const compact=el("span","compact-context");
-    compact.append(contextPill(summary.skills.length,t("agentDockSkills")),contextPill(summary.plugins.length,t("plugins")),contextPill(summary.mcps.length,"MCP"),contextPill(summary.acps.length,"ACP"));
+    compact.append(contextPill(summary.skills.length,t("skills")),contextPill(summary.plugins.length,t("plugins")),contextPill(summary.mcps.length,"MCP"),contextPill(summary.workflows.length,t("workflow"),"workflow"),contextPill(summary.recall?t("on"):t("off"),t("recall")));
     compactShell({action:"context",title:t("capabilities")},[compact],fragment);
   }
 

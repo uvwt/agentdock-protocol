@@ -108,6 +108,12 @@ func TestAgentDockContextRendersPluginsAndMultiACP(t *testing.T) {
 		`plugins:node.context.plugins`,
 		`id===defaultProfile?t("defaultProfile")`,
 		`Renderer-only fallback for older nodes`,
+		`skills:"Skills"`,
+		`contextPill(summary.skills.length,t("skills"))`,
+		`contextPill(summary.plugins.length,t("plugins"))`,
+		`contextPill(summary.mcps.length,"MCP")`,
+		`contextPill(summary.workflows.length,t("workflow"),"workflow")`,
+		`contextPill(summary.recall?t("on"):t("off"),t("recall"))`,
 	} {
 		if !strings.Contains(html, marker) {
 			t.Fatalf("AgentDock context MCP App missing Plugin/ACP marker %q", marker)
@@ -115,6 +121,9 @@ func TestAgentDockContextRendersPluginsAndMultiACP(t *testing.T) {
 	}
 	if strings.Contains(html, `const acp=isObject(data.acp)&&data.acp.enabled?[{name:String(data.acp.agent||"ACP")`) {
 		t.Fatal("AgentDock context renderer still uses single-ACP primary path")
+	}
+	if strings.Contains(html, `contextPill(summary.acps.length,"ACP")`) {
+		t.Fatal("compact AgentDock context must not show ACP")
 	}
 }
 
