@@ -196,8 +196,9 @@ func localContextProperties(includeShared bool) map[string]any {
 			"name": stringProperty("Skill name."), "description": stringProperty("Short capability description."),
 			"file":           stringProperty("Exact skill:// resource URI for SKILL.md."),
 			"skill_ref":      stringProperty("Exact host-issued Skill reference for runtime binding."),
-			"source_type":    enumProperty("Skill source type.", "managed"),
+			"source_type":    enumProperty("Skill source type.", "managed", "plugin"),
 			"source_id":      stringProperty("Opaque source identity issued by the host."),
+			"plugin_name":    stringProperty("Owning Plugin name when source_type is plugin."),
 			"content_digest": stringProperty("Current package content digest when the source has immutable managed content."),
 		}, "required": []string{"name", "description", "file", "skill_ref", "source_type", "source_id"}, "additionalProperties": false,
 	}
@@ -276,6 +277,9 @@ func contextItemSchema(requireDescription bool) map[string]any {
 func dynamicMCPItemSchema() map[string]any {
 	schema := contextItemSchema(true)
 	properties := schema["properties"].(map[string]any)
+	properties["display_name"] = stringProperty("Human-facing server component name when it differs from the stable runtime name.")
+	properties["source_type"] = enumProperty("MCP ownership source type.", "standalone", "plugin")
+	properties["plugin_name"] = stringProperty("Owning Plugin name when source_type is plugin.")
 	properties["status"] = map[string]any{
 		"type": "string", "description": "Runtime health state: idle, ready, or error.",
 		"enum": []string{"idle", "ready", "error"},
