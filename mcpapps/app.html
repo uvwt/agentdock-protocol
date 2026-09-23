@@ -45,7 +45,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
       items:"{count} items",workflowMatch:"Workflow match",score:"score {score}",candidates:"{count} candidates",candidate:"Candidate",noWorkflowMatches:"No workflow matches.",
       result:"Result",content:"Content",mcpTool:"MCP tool",externalMcp:"external MCP",server:"Server",tool:"Tool",contentCount:"{count} content",externalMcpVia:"External MCP via {server}",externalMcpInvoked:"External MCP tool invoked",
       artifact:"Artifact",file:"file",temporaryLink:"temporary link",type:"Type",size:"Size",dimensions:"Dimensions",artifactId:"Artifact ID",expires:"Expires",signedUrl:"Signed URL",published:"published",updated:"Updated",state:"State",statusLabel:"Status",path:"Path",
-      agentDockSkills:"AgentDock Skills",commonSkills:"Common Skills",workflow:"Workflow",recall:"Recall",capabilities:"Capabilities",devices:"Devices",online:"Online",on:"ON",off:"OFF",
+      agentDockSkills:"AgentDock Skills",commonSkills:"Common Skills",plugins:"Plugins",defaultProfile:"Default",workflow:"Workflow",recall:"Recall",capabilities:"Capabilities",devices:"Devices",online:"Online",on:"ON",off:"OFF",
       unavailable:"Unavailable",contextUnavailable:"Context unavailable",nodeOffline:"AgentDock node is offline",nodeUnavailable:"{name} is currently unavailable",
       tasks:"{count} tasks",noTasks:"No tasks.",steps:"{done} / {total} steps",review:"review {status}",sessions:"{count} sessions",noAcpSessions:"No ACP sessions.",session:"Session",authenticated:"authenticated",deleted:"deleted",noMessages:"No user or assistant messages in this AgentDock process.",
       dryRun:"dry run",noChange:"no change",previewTruncated:"preview truncated",noChangeSentence:"No change.",fileChange:"File change",unableInitialize:"Unable to initialize MCP App.",
@@ -59,7 +59,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
       items:"{count} items",workflowMatch:"Workflow match",score:"score {score}",candidates:"{count} candidates",candidate:"Candidate",noWorkflowMatches:"No workflow matches.",
       result:"Result",content:"Content",mcpTool:"MCP tool",externalMcp:"external MCP",server:"Server",tool:"Tool",contentCount:"{count} content",externalMcpVia:"External MCP via {server}",externalMcpInvoked:"External MCP tool invoked",
       artifact:"Artifact",file:"file",temporaryLink:"temporary link",type:"Type",size:"Size",dimensions:"Dimensions",artifactId:"Artifact ID",expires:"Expires",signedUrl:"Signed URL",published:"published",updated:"Updated",state:"State",statusLabel:"Status",path:"Path",
-      agentDockSkills:"AgentDock Skills",commonSkills:"Common Skills",workflow:"Workflow",recall:"Recall",capabilities:"Capabilities",devices:"Devices",online:"在线",on:"ON",off:"OFF",
+      agentDockSkills:"AgentDock Skills",commonSkills:"Common Skills",plugins:"Plugins",defaultProfile:"默认",workflow:"Workflow",recall:"Recall",capabilities:"Capabilities",devices:"Devices",online:"在线",on:"ON",off:"OFF",
       unavailable:"不可用",contextUnavailable:"Context 暂不可用",nodeOffline:"AgentDock 节点当前离线",nodeUnavailable:"{name} 当前不可用",
       tasks:"{count} tasks",noTasks:"No tasks.",steps:"{done} / {total} steps",review:"review {status}",sessions:"{count} sessions",noAcpSessions:"No ACP sessions.",session:"Session",authenticated:"authenticated",deleted:"deleted",noMessages:"No user or assistant messages in this AgentDock process.",
       dryRun:"dry run",noChange:"no change",previewTruncated:"preview truncated",noChangeSentence:"No change.",fileChange:"File change",unableInitialize:"Unable to initialize MCP App.",
@@ -224,6 +224,34 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
   function contextItems(items){
     if(!Array.isArray(items))return [];
     return items.filter(isObject).map(item=>({name:String(item.name||t("item")),description:String(item.description||"")}));
+  }
+
+  function pluginContextItems(items){
+    if(!Array.isArray(items))return [];
+    return items.filter(isObject).map(item=>{
+      const version=String(item.version||"");
+      const format=String(item.format||"portable");
+      const counts=[Number.isFinite(Number(item.skills_count))?Number(item.skills_count)+" Skills":"",Number.isFinite(Number(item.mcp_count))?Number(item.mcp_count)+" MCP":""].filter(Boolean);
+      const source=item.adapted===true?format+" → Portable":format;
+      const meta=[version?"v"+version:"",stateLabel(item.enabled===false?"disabled":"enabled"),source,...counts].filter(Boolean);
+      const description=String(item.description||"");
+      return{name:String(item.name||t("item")),description:[meta.join(" · "),description].filter(Boolean).join(" · ")};
+    });
+  }
+
+  function acpContextItems(acp){
+    if(!isObject(acp)||acp.enabled!==true)return [];
+    const defaultProfile=String(acp.default_profile||"");
+    if(Array.isArray(acp.profiles)){
+      return acp.profiles.filter(isObject).map(profile=>{
+        const id=String(profile.id||"ACP");
+        const kind=String(profile.kind||"");
+        return{name:id,description:[kind,id===defaultProfile?t("defaultProfile"):""].filter(Boolean).join(" · ")};
+      });
+    }
+    // Renderer-only fallback for older nodes; the current protocol contract uses profiles[].
+    if(acp.agent)return[{name:String(acp.agent),description:String(acp.description||"ACP agent")}];
+    return[];
   }
 
   function contextPill(value,label,className){
@@ -488,33 +516,35 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     const skills=contextItems(data.skills);
     const commonSkillIndex=isObject(data.common_skills)?data.common_skills:{};
     const commonSkills=contextItems(commonSkillIndex.items);
+    const plugins=pluginContextItems(data.plugins);
     const mcps=contextItems(data.dynamic_mcp);
-    const acp=isObject(data.acp)&&data.acp.enabled?[{name:String(data.acp.agent||"ACP"),description:String(data.acp.description||"ACP agent")}]:[];
+    const acps=acpContextItems(data.acp);
     const workflows=contextItems(data.workflow_templates);
     const recall=isObject(data.recall)&&data.recall.enabled;
 
     const overview=el("div","context-overview");
     appendContextOverview(overview,skills.length,t("agentDockSkills"));
+    appendContextOverview(overview,plugins.length,t("plugins"));
     appendContextOverview(overview,mcps.length,"MCP");
-    appendContextOverview(overview,workflows.length,t("workflow"));
-    appendContextOverview(overview,recall?t("on"):t("off"),t("recall"));
+    appendContextOverview(overview,acps.length,"ACP");
     parent.append(overview);
 
     const groups=el("div","context-groups");
     appendContextSection(groups,t("agentDockSkills"),skills,10);
     appendContextSection(groups,t("commonSkills"),commonSkills,10);
+    appendContextSection(groups,t("plugins"),plugins,8);
     appendContextSection(groups,"MCP",mcps,8);
-    appendContextSection(groups,"ACP",acp,4);
+    appendContextSection(groups,"ACP",acps,8);
     appendContextSection(groups,t("workflow"),workflows,8);
     parent.append(groups);
-    return{skills,mcps,workflows,recall};
+    return{skills,plugins,mcps,acps,workflows,recall};
   }
 
   function renderNodeAgentContext(data){
     const fragment=document.createDocumentFragment();
     const summary=appendNodeAgentContext(fragment,data);
     const compact=el("span","compact-context");
-    compact.append(contextPill(summary.skills.length,t("agentDockSkills")),contextPill(summary.mcps.length,"MCP"),contextPill(summary.workflows.length,t("workflow"),"workflow"),contextPill(summary.recall?t("on"):t("off"),t("recall")));
+    compact.append(contextPill(summary.skills.length,t("agentDockSkills")),contextPill(summary.plugins.length,t("plugins")),contextPill(summary.mcps.length,"MCP"),contextPill(summary.acps.length,"ACP"));
     compactShell({action:"context",title:t("capabilities")},[compact],fragment);
   }
 
@@ -547,6 +577,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
       appendNodeAgentContext(content,{
         skills:node.context.skills,
         common_skills:node.context.common_skills,
+        plugins:node.context.plugins,
         dynamic_mcp:node.context.dynamic_mcp,
         acp:node.context.acp,
         workflow_templates:shared.workflow_templates,

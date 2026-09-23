@@ -92,6 +92,32 @@ func TestHTMLLocalizesFromBrowserAndHostLocale(t *testing.T) {
 	}
 }
 
+func TestAgentDockContextRendersPluginsAndMultiACP(t *testing.T) {
+	html := HTML("agentdock_context", "Context")
+	for _, marker := range []string{
+		`plugins:"Plugins"`,
+		`defaultProfile:"Default"`,
+		`function pluginContextItems(items)`,
+		`function acpContextItems(acp)`,
+		`const plugins=pluginContextItems(data.plugins)`,
+		`const acps=acpContextItems(data.acp)`,
+		`appendContextOverview(overview,plugins.length,t("plugins"))`,
+		`appendContextOverview(overview,acps.length,"ACP")`,
+		`appendContextSection(groups,t("plugins"),plugins,8)`,
+		`appendContextSection(groups,"ACP",acps,8)`,
+		`plugins:node.context.plugins`,
+		`id===defaultProfile?t("defaultProfile")`,
+		`Renderer-only fallback for older nodes`,
+	} {
+		if !strings.Contains(html, marker) {
+			t.Fatalf("AgentDock context MCP App missing Plugin/ACP marker %q", marker)
+		}
+	}
+	if strings.Contains(html, `const acp=isObject(data.acp)&&data.acp.enabled?[{name:String(data.acp.agent||"ACP")`) {
+		t.Fatal("AgentDock context renderer still uses single-ACP primary path")
+	}
+}
+
 func TestHTMLZhCNPreservesHistoricalMixedTerminology(t *testing.T) {
 	html := HTML("agentdock_context", "Context")
 	start := strings.Index(html, `"zh-CN":{`)
