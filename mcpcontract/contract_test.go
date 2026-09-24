@@ -102,7 +102,7 @@ func TestWorkspaceContextHasCanonicalDirectAndNodeProfiles(t *testing.T) {
 	workspaceSkills := properties["workspace_skills"].(map[string]any)
 	workspaceSkill := workspaceSkills["items"].(map[string]any)
 	workspaceSkillProps := workspaceSkill["properties"].(map[string]any)
-	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type", "source_id"} {
+	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type"} {
 		if _, ok := workspaceSkillProps[name]; !ok {
 			t.Fatalf("workspace Skill provenance is missing %s", name)
 		}
@@ -157,7 +157,7 @@ func TestContextHasExplicitLocalAndFleetProfiles(t *testing.T) {
 	}
 	managedSkill := localProperties["skills"].(map[string]any)["items"].(map[string]any)
 	managedSkillProps := managedSkill["properties"].(map[string]any)
-	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type", "source_id", "plugin_name", "content_digest"} {
+	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type", "plugin_name"} {
 		if _, ok := managedSkillProps[name]; !ok {
 			t.Fatalf("managed/plugin Skill provenance is missing %s", name)
 		}
@@ -167,7 +167,7 @@ func TestContextHasExplicitLocalAndFleetProfiles(t *testing.T) {
 	}
 	commonSkill := commonProperties["items"].(map[string]any)["items"].(map[string]any)
 	commonSkillProps := commonSkill["properties"].(map[string]any)
-	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type", "source_id", "content_digest"} {
+	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type"} {
 		if _, ok := commonSkillProps[name]; !ok {
 			t.Fatalf("common Skill provenance is missing %s", name)
 		}
@@ -203,7 +203,7 @@ func TestContextHasExplicitLocalAndFleetProfiles(t *testing.T) {
 	plugins := localProperties["plugins"].(map[string]any)
 	pluginItem := plugins["items"].(map[string]any)
 	pluginProperties := pluginItem["properties"].(map[string]any)
-	for _, name := range []string{"name", "version", "enabled", "description", "skills_count", "mcp_count", "format", "adapted"} {
+	for _, name := range []string{"name", "version", "enabled", "description", "skills_count", "mcp_count", "format"} {
 		if _, ok := pluginProperties[name]; !ok {
 			t.Fatalf("Plugin context item is missing %s", name)
 		}

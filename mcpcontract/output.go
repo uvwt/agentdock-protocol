@@ -132,8 +132,7 @@ func WorkspaceContextOutputSchema() map[string]any {
 		"file":        stringProperty("Exact skill:// resource URI for the workspace-local SKILL.md."),
 		"skill_ref":   stringProperty("Exact host-issued Skill reference for runtime binding."),
 		"source_type": enumProperty("Skill source type.", "workspace"),
-		"source_id":   stringProperty("Opaque workspace source identity issued by the host."),
-	}, "name", "description", "file", "skill_ref", "source_type", "source_id")
+	}, "name", "description", "file", "skill_ref", "source_type")
 	warning := strictObject(map[string]any{
 		"source":  stringProperty("Workspace context section identifier."),
 		"message": stringProperty("Safe warning message."),
@@ -194,23 +193,19 @@ func localContextProperties(includeShared, allowLegacyACP bool) map[string]any {
 	skill := map[string]any{
 		"type": "object", "properties": map[string]any{
 			"name": stringProperty("Skill name."), "description": stringProperty("Short capability description."),
-			"file":           stringProperty("Exact skill:// resource URI for SKILL.md."),
-			"skill_ref":      stringProperty("Exact host-issued Skill reference for runtime binding."),
-			"source_type":    enumProperty("Skill source type.", "managed", "plugin"),
-			"source_id":      stringProperty("Opaque source identity issued by the host."),
-			"plugin_name":    stringProperty("Owning Plugin name when source_type is plugin."),
-			"content_digest": stringProperty("Current package content digest when the source has immutable managed content."),
-		}, "required": []string{"name", "description", "file", "skill_ref", "source_type", "source_id"}, "additionalProperties": false,
+			"file":        stringProperty("Exact skill:// resource URI for SKILL.md."),
+			"skill_ref":   stringProperty("Exact host-issued Skill reference for runtime binding."),
+			"source_type": enumProperty("Skill source type.", "managed", "plugin"),
+			"plugin_name": stringProperty("Owning Plugin name when source_type is plugin."),
+		}, "required": []string{"name", "description", "file", "skill_ref", "source_type"}, "additionalProperties": false,
 	}
 	commonSkill := map[string]any{
 		"type": "object", "properties": map[string]any{
 			"name": stringProperty("Common Skill name."), "description": stringProperty("Short capability description."),
-			"file":           stringProperty("Exact skill:// resource URI for the common SKILL.md."),
-			"skill_ref":      stringProperty("Exact host-issued Skill reference for runtime binding."),
-			"source_type":    enumProperty("Skill source type.", "shared"),
-			"source_id":      stringProperty("Opaque shared source identity issued by the host."),
-			"content_digest": stringProperty("Optional content digest when the host can provide one."),
-		}, "required": []string{"name", "description", "file", "skill_ref", "source_type", "source_id"}, "additionalProperties": false,
+			"file":        stringProperty("Exact skill:// resource URI for the common SKILL.md."),
+			"skill_ref":   stringProperty("Exact host-issued Skill reference for runtime binding."),
+			"source_type": enumProperty("Skill source type.", "shared"),
+		}, "required": []string{"name", "description", "file", "skill_ref", "source_type"}, "additionalProperties": false,
 	}
 	commonSkills := strictObject(map[string]any{
 		"root":      stringProperty("Common Agent Skills root path."),
@@ -305,8 +300,7 @@ func pluginContextItemSchema() map[string]any {
 		"skills_count": integerProperty("Number of Skills owned by the Plugin."),
 		"mcp_count":    integerProperty("Number of MCP servers owned by the Plugin."),
 		"format":       stringProperty("Original or canonical Plugin format."),
-		"adapted":      booleanProperty("Whether the installed package was adapted from another Plugin format."),
-	}, "name", "version", "enabled", "description", "skills_count", "mcp_count", "format", "adapted")
+	}, "name", "version", "enabled", "description", "skills_count", "mcp_count", "format")
 }
 
 func dynamicMCPItemSchema() map[string]any {
