@@ -37,6 +37,11 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
   const systemTheme=typeof window.matchMedia==="function"?window.matchMedia("(prefers-color-scheme: dark)"):null;
   let hostTheme="";
   let lastData=null;
+  // 自动展开相关状态：记录用户是否手动点击过，避免覆盖用户选择
+  let userToggledExpand=false;
+  // 用户最后一次明确的展开/折叠状态（仅在 userToggledExpand=true 时有意义）
+  let userExpandedState=false;
+  let currentShellToggle=null;
   const messages={
     en:{
       waiting:"Waiting for tool output…",item:"Item",step:"Step",status:"STATUS",moreItems:"{count} more",
@@ -134,12 +139,47 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
 
   function startAutoResize(){
     if(typeof ResizeObserver!=="undefined"){
+      // ResizeObserver 职责单一：仅用于追踪内容高度变化并上报给宿主
       resizeObserver=new ResizeObserver(reportSize);
       resizeObserver.observe(document.body);
       resizeObserver.observe(document.documentElement);
     }
+    // window resize 反映宿主分配给 iframe 的可用 viewport 变化，
+    // 用于触发大区域自动展开（单向，不做自动折叠，避免振荡）
+    window.addEventListener("resize",tryAutoExpand,{passive:true});
     requestAnimationFrame(reportSize);
   }
+
+  // 大 viewport 自动展开阈值：
+  //   AUTO_EXPAND_MIN_HEIGHT=500px — 宿主给 iframe 分配了明显宽裕的垂直空间，适合默认展示详情；
+  //                                  小于此值（常见嵌入面板或折叠状态）保持默认折叠。
+  //   AUTO_EXPAND_MIN_WIDTH=400px  — 避免高但窄的移动端竖屏（360-390px）因高度满足而误展开；
+  //                                  两个条件同时满足才认定为"宽敞布局"。
+  const AUTO_EXPAND_MIN_HEIGHT=500;
+  const AUTO_EXPAND_MIN_WIDTH=400;
+
+  function isLargeViewport(){
+    // window.innerHeight/innerWidth 在 iframe 内反映宿主分配的可用区域，
+    // 比 document 尺寸更能代表宿主已给出的空间。
+    return window.innerHeight>=AUTO_EXPAND_MIN_HEIGHT&&window.innerWidth>=AUTO_EXPAND_MIN_WIDTH;
+  }
+
+  // 尝试自动展开：单向操作，只展开、不自动折叠，防止 reportSize→host resize 振荡。
+  // userToggledExpand=true 后此函数立即退出，不再覆盖用户选择。
+  function tryAutoExpand(){
+    if(userToggledExpand)return;
+    if(!currentShellToggle)return;
+    if(!isLargeViewport())return;
+    const alreadyExpanded=currentShellToggle.getAttribute("aria-expanded")==="true";
+    if(alreadyExpanded)return;
+    currentShellToggle.setAttribute("aria-expanded","true");
+    currentShellToggle.classList.add("expanded");
+    // detail-panel 是 toggle 的紧邻兄弟节点
+    const panel=currentShellToggle.nextElementSibling;
+    if(panel)panel.hidden=false;
+    requestAnimationFrame(reportSize);
+  }
+
 
   function compactShell(primary,rows,details){
     const wrapper=el("div","app-shell");
@@ -159,10 +199,32 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
       toggle.classList.add("single-line");
     }
     const panel=el("div","detail-panel");panel.hidden=true;panel.append(details);
-    toggle.addEventListener("click",()=>{const expanded=toggle.getAttribute("aria-expanded")==="true";toggle.setAttribute("aria-expanded",String(!expanded));toggle.classList.toggle("expanded",!expanded);panel.hidden=expanded;requestAnimationFrame(reportSize)});
+    toggle.addEventListener("click",()=>{
+      // 记录用户手动操作；之后 resize/re-render 均不再自动覆盖选择
+      userToggledExpand=true;
+      const expanded=toggle.getAttribute("aria-expanded")==="true";
+      userExpandedState=!expanded;
+      toggle.setAttribute("aria-expanded",String(!expanded));
+      toggle.classList.toggle("expanded",!expanded);
+      panel.hidden=expanded;
+      requestAnimationFrame(reportSize);
+    });
     wrapper.append(toggle,panel);
     root.classList.remove("empty","waiting-empty");
     root.replaceChildren(wrapper);
+    // 更新当前 shell toggle 引用，供 tryAutoExpand 使用
+    currentShellToggle=toggle;
+    if(userToggledExpand){
+      // re-render 时恢复用户的明确选择，不因 tool-result 更新丢失展开状态
+      if(userExpandedState){
+        toggle.setAttribute("aria-expanded","true");
+        toggle.classList.add("expanded");
+        panel.hidden=false;
+      }
+    }else{
+      // 首次渲染：大 viewport 时自动展开
+      tryAutoExpand();
+    }
   }
 
   function taskProgress(steps){
