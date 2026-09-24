@@ -102,7 +102,7 @@ func TestWorkspaceContextHasCanonicalDirectAndNodeProfiles(t *testing.T) {
 	workspaceSkills := properties["workspace_skills"].(map[string]any)
 	workspaceSkill := workspaceSkills["items"].(map[string]any)
 	workspaceSkillProps := workspaceSkill["properties"].(map[string]any)
-	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type", "source_id"} {
+	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type"} {
 		if _, ok := workspaceSkillProps[name]; !ok {
 			t.Fatalf("workspace Skill provenance is missing %s", name)
 		}
@@ -157,7 +157,7 @@ func TestContextHasExplicitLocalAndFleetProfiles(t *testing.T) {
 	}
 	managedSkill := localProperties["skills"].(map[string]any)["items"].(map[string]any)
 	managedSkillProps := managedSkill["properties"].(map[string]any)
-	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type", "source_id", "plugin_name", "content_digest"} {
+	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type", "plugin_name"} {
 		if _, ok := managedSkillProps[name]; !ok {
 			t.Fatalf("managed/plugin Skill provenance is missing %s", name)
 		}
@@ -167,7 +167,7 @@ func TestContextHasExplicitLocalAndFleetProfiles(t *testing.T) {
 	}
 	commonSkill := commonProperties["items"].(map[string]any)["items"].(map[string]any)
 	commonSkillProps := commonSkill["properties"].(map[string]any)
-	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type", "source_id", "content_digest"} {
+	for _, name := range []string{"name", "description", "file", "skill_ref", "source_type"} {
 		if _, ok := commonSkillProps[name]; !ok {
 			t.Fatalf("common Skill provenance is missing %s", name)
 		}
@@ -199,6 +199,50 @@ func TestContextHasExplicitLocalAndFleetProfiles(t *testing.T) {
 	if _, ok := fleet["properties"].(map[string]any)["nodes"]; !ok {
 		t.Fatal("fleet context is missing nodes")
 	}
+
+	plugins := localProperties["plugins"].(map[string]any)
+	pluginItem := plugins["items"].(map[string]any)
+	pluginProperties := pluginItem["properties"].(map[string]any)
+	for _, name := range []string{"name", "version", "enabled", "description", "skills_count", "mcp_count", "format"} {
+		if _, ok := pluginProperties[name]; !ok {
+			t.Fatalf("Plugin context item is missing %s", name)
+		}
+	}
+	if pluginItem["additionalProperties"] != false {
+		t.Fatalf("Plugin context item must remain strict: %#v", pluginItem)
+	}
+	localRequired := local["required"].([]string)
+	if !containsString(localRequired, "plugins") {
+		t.Fatalf("local context must require plugins: %#v", localRequired)
+	}
+	nodeRequired := nodeContext["required"].([]string)
+	if containsString(nodeRequired, "plugins") {
+		t.Fatalf("fleet node plugins must remain optional for rolling compatibility: %#v", nodeRequired)
+	}
+
+	acp := localProperties["acp"].(map[string]any)
+	acpProperties := acp["properties"].(map[string]any)
+	for _, name := range []string{"enabled", "default_profile", "profiles", "description"} {
+		if _, ok := acpProperties[name]; !ok {
+			t.Fatalf("ACP context is missing %s", name)
+		}
+	}
+	if _, legacy := acpProperties["agent"]; legacy {
+		t.Fatal("ACP context still exposes legacy agent field")
+	}
+	profile := acpProperties["profiles"].(map[string]any)["items"].(map[string]any)
+	profileProperties := profile["properties"].(map[string]any)
+	for _, name := range []string{"id", "kind"} {
+		if _, ok := profileProperties[name]; !ok {
+			t.Fatalf("ACP profile is missing %s", name)
+		}
+	}
+	fleetACP := nodeContext["properties"].(map[string]any)["acp"].(map[string]any)
+	alternatives, ok := fleetACP["oneOf"].([]any)
+	if !ok || len(alternatives) != 2 {
+		t.Fatalf("fleet ACP schema must accept current and legacy nodes: %#v", fleetACP)
+	}
+
 	dynamicMCP := localProperties["dynamic_mcp"].(map[string]any)
 	dynamicItem := dynamicMCP["items"].(map[string]any)
 	dynamicProperties := dynamicItem["properties"].(map[string]any)
@@ -243,4 +287,13 @@ func TestRecallWriteBehaviorVectorsCoverSafetyBoundary(t *testing.T) {
 			t.Fatalf("missing behavior vector %q", name)
 		}
 	}
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }

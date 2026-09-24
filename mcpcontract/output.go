@@ -132,8 +132,7 @@ func WorkspaceContextOutputSchema() map[string]any {
 		"file":        stringProperty("Exact skill:// resource URI for the workspace-local SKILL.md."),
 		"skill_ref":   stringProperty("Exact host-issued Skill reference for runtime binding."),
 		"source_type": enumProperty("Skill source type.", "workspace"),
-		"source_id":   stringProperty("Opaque workspace source identity issued by the host."),
-	}, "name", "description", "file", "skill_ref", "source_type", "source_id")
+	}, "name", "description", "file", "skill_ref", "source_type")
 	warning := strictObject(map[string]any{
 		"source":  stringProperty("Workspace context section identifier."),
 		"message": stringProperty("Safe warning message."),
@@ -148,9 +147,9 @@ func WorkspaceContextOutputSchema() map[string]any {
 }
 
 func LocalAgentDockContextOutputSchema() map[string]any {
-	props := localContextProperties(true)
+	props := localContextProperties(true, false)
 	props["runtime"] = agentDockRuntimeSchema()
-	return strictObject(props, "runtime", "skills", "dynamic_mcp", "workflow_templates", "rules")
+	return strictObject(props, "runtime", "skills", "plugins", "dynamic_mcp", "workflow_templates", "rules")
 }
 
 func FleetAgentDockContextOutputSchema() map[string]any {
@@ -161,7 +160,7 @@ func FleetAgentDockContextOutputSchema() map[string]any {
 		}, "required": []string{"source", "message"}, "additionalProperties": false,
 	}
 	rules := map[string]any{"type": "array", "items": map[string]any{"type": "string"}}
-	local := strictObject(localContextProperties(false), "skills", "dynamic_mcp", "rules")
+	local := strictObject(localContextProperties(false, true), "skills", "dynamic_mcp", "rules")
 	shared := strictObject(map[string]any{
 		"workflow_templates": map[string]any{"type": "array", "items": item},
 		"recall": strictObject(map[string]any{
@@ -190,27 +189,23 @@ func FleetAgentDockContextOutputSchema() map[string]any {
 	}, "nodes", "shared")
 }
 
-func localContextProperties(includeShared bool) map[string]any {
+func localContextProperties(includeShared, allowLegacyACP bool) map[string]any {
 	skill := map[string]any{
 		"type": "object", "properties": map[string]any{
 			"name": stringProperty("Skill name."), "description": stringProperty("Short capability description."),
-			"file":           stringProperty("Exact skill:// resource URI for SKILL.md."),
-			"skill_ref":      stringProperty("Exact host-issued Skill reference for runtime binding."),
-			"source_type":    enumProperty("Skill source type.", "managed", "plugin"),
-			"source_id":      stringProperty("Opaque source identity issued by the host."),
-			"plugin_name":    stringProperty("Owning Plugin name when source_type is plugin."),
-			"content_digest": stringProperty("Current package content digest when the source has immutable managed content."),
-		}, "required": []string{"name", "description", "file", "skill_ref", "source_type", "source_id"}, "additionalProperties": false,
+			"file":        stringProperty("Exact skill:// resource URI for SKILL.md."),
+			"skill_ref":   stringProperty("Exact host-issued Skill reference for runtime binding."),
+			"source_type": enumProperty("Skill source type.", "managed", "plugin"),
+			"plugin_name": stringProperty("Owning Plugin name when source_type is plugin."),
+		}, "required": []string{"name", "description", "file", "skill_ref", "source_type"}, "additionalProperties": false,
 	}
 	commonSkill := map[string]any{
 		"type": "object", "properties": map[string]any{
 			"name": stringProperty("Common Skill name."), "description": stringProperty("Short capability description."),
-			"file":           stringProperty("Exact skill:// resource URI for the common SKILL.md."),
-			"skill_ref":      stringProperty("Exact host-issued Skill reference for runtime binding."),
-			"source_type":    enumProperty("Skill source type.", "shared"),
-			"source_id":      stringProperty("Opaque shared source identity issued by the host."),
-			"content_digest": stringProperty("Optional content digest when the host can provide one."),
-		}, "required": []string{"name", "description", "file", "skill_ref", "source_type", "source_id"}, "additionalProperties": false,
+			"file":        stringProperty("Exact skill:// resource URI for the common SKILL.md."),
+			"skill_ref":   stringProperty("Exact host-issued Skill reference for runtime binding."),
+			"source_type": enumProperty("Skill source type.", "shared"),
+		}, "required": []string{"name", "description", "file", "skill_ref", "source_type"}, "additionalProperties": false,
 	}
 	commonSkills := strictObject(map[string]any{
 		"root":      stringProperty("Common Agent Skills root path."),
@@ -219,6 +214,7 @@ func localContextProperties(includeShared bool) map[string]any {
 		"items":     map[string]any{"type": "array", "items": commonSkill},
 	}, "root", "total", "truncated", "items")
 	commonSkills["description"] = "Lower-priority common Agent Skill capability index; installed AgentDock Skills take precedence on conflicts."
+	pluginItem := pluginContextItemSchema()
 	dynamicItem := dynamicMCPItemSchema()
 	indexItem := contextItemSchema(false)
 	warning := map[string]any{
@@ -229,12 +225,11 @@ func localContextProperties(includeShared bool) map[string]any {
 	props := map[string]any{
 		"skills":        map[string]any{"type": "array", "description": "Installed document Skill capability index.", "items": skill},
 		"common_skills": commonSkills,
+		"plugins":       map[string]any{"type": "array", "description": "Installed Plugin capability index.", "items": pluginItem},
 		"dynamic_mcp":   map[string]any{"type": "array", "description": "Enabled dynamic MCP server capability index.", "items": dynamicItem},
-		"acp": strictObject(map[string]any{
-			"enabled": booleanProperty("Whether ACP is enabled."), "agent": stringProperty("Configured ACP agent name."), "description": stringProperty("Short ACP usage orientation."),
-		}, "enabled", "agent", "description"),
-		"rules":    map[string]any{"type": "array", "description": "Operational rules for using this AgentDock runtime.", "items": map[string]any{"type": "string"}},
-		"warnings": map[string]any{"type": "array", "description": "Best-effort context sections that could not be loaded.", "items": warning},
+		"acp":           acpContextSchema(allowLegacyACP),
+		"rules":         map[string]any{"type": "array", "description": "Operational rules for using this AgentDock runtime.", "items": map[string]any{"type": "string"}},
+		"warnings":      map[string]any{"type": "array", "description": "Best-effort context sections that could not be loaded.", "items": warning},
 	}
 	if includeShared {
 		props["workflow_templates"] = map[string]any{"type": "array", "description": "Active NexusDock Workflow template index; empty when Nexus is unavailable.", "items": indexItem}
@@ -272,6 +267,40 @@ func contextItemSchema(requireDescription bool) map[string]any {
 		"required":             required,
 		"additionalProperties": false,
 	}
+}
+
+func acpContextSchema(allowLegacy bool) map[string]any {
+	profile := strictObject(map[string]any{
+		"id":   stringProperty("Stable ACP profile identifier."),
+		"kind": stringProperty("ACP profile kind."),
+	}, "id", "kind")
+	current := strictObject(map[string]any{
+		"enabled":         booleanProperty("Whether ACP is enabled."),
+		"default_profile": stringProperty("Default ACP profile identifier."),
+		"profiles":        map[string]any{"type": "array", "items": profile},
+		"description":     stringProperty("Short ACP usage orientation."),
+	}, "enabled", "default_profile", "profiles", "description")
+	if !allowLegacy {
+		return current
+	}
+	legacy := strictObject(map[string]any{
+		"enabled":     booleanProperty("Whether ACP is enabled."),
+		"agent":       stringProperty("Legacy single ACP agent name."),
+		"description": stringProperty("Short ACP usage orientation."),
+	}, "enabled", "agent", "description")
+	return map[string]any{"oneOf": []any{current, legacy}}
+}
+
+func pluginContextItemSchema() map[string]any {
+	return strictObject(map[string]any{
+		"name":         stringProperty("Plugin name."),
+		"version":      stringProperty("Installed Plugin version."),
+		"enabled":      booleanProperty("Whether the Plugin runtime is enabled."),
+		"description":  stringProperty("Short Plugin description."),
+		"skills_count": integerProperty("Number of Skills owned by the Plugin."),
+		"mcp_count":    integerProperty("Number of MCP servers owned by the Plugin."),
+		"format":       stringProperty("Original or canonical Plugin format."),
+	}, "name", "version", "enabled", "description", "skills_count", "mcp_count", "format")
 }
 
 func dynamicMCPItemSchema() map[string]any {
