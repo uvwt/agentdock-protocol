@@ -24,10 +24,12 @@ func TestHelloAdditiveFieldsRemainWireCompatible(t *testing.T) {
 	encoded := []byte(`{
 		"type":"node.hello",
 		"protocol_version":"2",
+		"public_url":"https://nexus.example.test",
 		"hello":{
 			"device_id":"device_abcdefgh",
 			"version":"0.8.0",
 			"protocol_version":"2",
+		"public_url":"https://nexus.example.test",
 			"os":"darwin",
 			"arch":"arm64",
 			"capabilities":["read_file"],
@@ -42,6 +44,9 @@ func TestHelloAdditiveFieldsRemainWireCompatible(t *testing.T) {
 	var message Message
 	if err := json.Unmarshal(encoded, &message); err != nil {
 		t.Fatalf("additive Hello field must be ignored by older-compatible decoding: %v", err)
+	}
+	if message.PublicURL != "https://nexus.example.test" {
+		t.Fatalf("decoded public_url = %q", message.PublicURL)
 	}
 	if message.Hello == nil || len(message.Hello.BridgeCapabilities) != 1 || message.Hello.BridgeCapabilities[0] != ArtifactReadCapability {
 		t.Fatalf("decoded hello = %#v", message.Hello)

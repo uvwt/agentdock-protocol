@@ -13,6 +13,7 @@ type Message struct {
 	Hello           *Hello          `json:"hello,omitempty"`
 	ProtocolVersion string          `json:"protocol_version,omitempty"`
 	HeartbeatMS     int             `json:"heartbeat_ms,omitempty"`
+	PublicURL       string          `json:"public_url,omitempty"`
 }
 
 // Hello is the complete node capability snapshot sent at connection time.
