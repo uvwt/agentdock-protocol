@@ -310,8 +310,8 @@ func dynamicMCPItemSchema() map[string]any {
 	properties["source_type"] = enumProperty("MCP ownership source type.", "standalone", "plugin")
 	properties["plugin_name"] = stringProperty("Owning Plugin name when source_type is plugin.")
 	properties["status"] = map[string]any{
-		"type": "string", "description": "Runtime health state: idle, ready, or error.",
-		"enum": []string{"idle", "ready", "error"},
+		"type": "string", "description": "Runtime health state: idle, auth_required, authorizing, ready, or error.",
+		"enum": []string{"idle", "auth_required", "authorizing", "ready", "error"},
 	}
 	properties["tool_count"] = integerProperty("Discovered tool count from the latest successful refresh.")
 	properties["last_error_code"] = stringProperty("Safe machine-readable code for the latest refresh error.")
