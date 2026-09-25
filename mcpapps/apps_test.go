@@ -136,8 +136,8 @@ func TestWorkspaceContextRendersRulesSkillsAndPaths(t *testing.T) {
 		`const visibleInstructions=instructions.filter(item=>String(item.status||"")!=="not_found")`,
 		`appendContextOverview(overview,loadedRules.length,t("rules"))`,
 		`appendContextOverview(overview,skills.length,t("skills"))`,
-		`{label:t("workdir"),value:workdir,mono:true}`,
-		`{label:t("root"),value:workspaceRoot,mono:true}`,
+		`const workspaceFields=[{label:t("workdir"),value:workdir,mono:true}]`,
+		`if(workspaceRoot&&workspaceRoot!==workdir)workspaceFields.push({label:t("workspaceRoot"),value:workspaceRoot,mono:true})`,
 		`if(hasContent)row.append(el("pre","workspace-rule-content",instruction.content))`,
 		`compactShell({title:t("workspace")+" · "+workspaceName}`,
 	} {
