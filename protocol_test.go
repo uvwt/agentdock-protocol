@@ -8,6 +8,7 @@ import (
 func TestUIResourceContractsAreExplicit(t *testing.T) {
 	cases := map[string]string{
 		ContextUIResourceURI:      ContextUIContract,
+		WorkspaceUIResourceURI:    WorkspaceUIContract,
 		TaskProgressUIResourceURI: TaskProgressUIContract,
 		FileChangeUIResourceURI:   FileChangeUIContract,
 		RecallUIResourceURI:       RecallUIContract,

@@ -31,6 +31,7 @@ const AgentDockUIResourcePrefix = "ui://agentdock/"
 
 const (
 	ContextUIResourceURI      = "ui://agentdock/context"
+	WorkspaceUIResourceURI    = "ui://agentdock/workspace-context"
 	TaskProgressUIResourceURI = "ui://agentdock/task-progress"
 	FileChangeUIResourceURI   = "ui://agentdock/file-change"
 	RecallUIResourceURI       = "ui://agentdock/recall"
@@ -42,6 +43,7 @@ const (
 
 const (
 	ContextUIContract      = "agentdock.context.fleet.v1"
+	WorkspaceUIContract    = "agentdock.workspace-context.v1"
 	TaskProgressUIContract = "agentdock.task-progress.v1"
 	FileChangeUIContract   = "agentdock.file-change.v1"
 	RecallUIContract       = "agentdock.recall.v1"
@@ -59,6 +61,8 @@ func UIResourceContract(uri string) (string, bool) {
 	switch uri {
 	case ContextUIResourceURI:
 		return ContextUIContract, true
+	case WorkspaceUIResourceURI:
+		return WorkspaceUIContract, true
 	case TaskProgressUIResourceURI:
 		return TaskProgressUIContract, true
 	case FileChangeUIResourceURI:
