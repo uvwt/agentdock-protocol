@@ -127,6 +127,26 @@ func TestAgentDockContextRendersPluginsAndMultiACP(t *testing.T) {
 	}
 }
 
+func TestWorkspaceContextRendersRulesSkillsAndPaths(t *testing.T) {
+	html := HTML("workspace_context", "Workspace")
+	for _, marker := range []string{
+		`expectedView="workspace_context"`,
+		`function renderWorkspaceContext(data)`,
+		`const loadedRules=instructions.filter(item=>String(item.status||"")==="loaded")`,
+		`const visibleInstructions=instructions.filter(item=>String(item.status||"")!=="not_found")`,
+		`appendContextOverview(overview,loadedRules.length,t("rules"))`,
+		`appendContextOverview(overview,skills.length,t("skills"))`,
+		`const workspaceFields=[{label:t("workdir"),value:workdir,mono:true}]`,
+		`if(workspaceRoot&&workspaceRoot!==workdir)workspaceFields.push({label:t("workspaceRoot"),value:workspaceRoot,mono:true})`,
+		`if(hasContent)row.append(el("pre","workspace-rule-content",instruction.content))`,
+		`compactShell({title:t("workspace")+" · "+workspaceName}`,
+	} {
+		if !strings.Contains(html, marker) {
+			t.Fatalf("Workspace context MCP App missing marker %q", marker)
+		}
+	}
+}
+
 func TestHTMLZhCNPreservesHistoricalMixedTerminology(t *testing.T) {
 	html := HTML("agentdock_context", "Context")
 	start := strings.Index(html, `"zh-CN":{`)
