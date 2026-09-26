@@ -152,13 +152,23 @@ test('waits for expanded user confirmation before standard model context plus ui
 
   assert.equal(ui.elements.metadata.textContent,'320 × 240 · PNG · Provided to model');
   assert.equal(ui.elements.share.hidden,false);
-  assert.equal(ui.elements.share.disabled,true);
+  assert.equal(ui.elements.share.disabled,false);
+
+  const repeat=ui.elements.share.click();
+  await waitUntil(()=>ui.requests('ui/update-model-context').length===2,'repeated context update');
+  ui.respond(ui.requests('ui/update-model-context')[1]);
+  await waitUntil(()=>ui.requests('ui/message').length===2,'repeated follow-up message');
+  ui.respond(ui.requests('ui/message')[1]);
+  await repeat;
+  assert.equal(ui.elements.metadata.textContent,'320 × 240 · PNG · Provided to model');
+  assert.equal(ui.elements.share.hidden,false);
+  assert.equal(ui.elements.share.disabled,false);
 
   ui.collapse();
   assert.equal(ui.elements.share.hidden,true);
   ui.expand();
   assert.equal(ui.elements.share.hidden,false);
-  assert.equal(ui.elements.share.disabled,true);
+  assert.equal(ui.elements.share.disabled,false);
 });
 
 test('uses direct standard image message only after user confirmation', async () => {

@@ -136,7 +136,7 @@
     if(!hasHandoffPath()){share.hidden=true;share.disabled=true;setStatus("previewOnly");return;}
     if(statusKey==="previewOnly") setStatus("ready");
     share.hidden=panel.hidden;
-    share.disabled=share.hidden || statusKey==="attached";
+    share.disabled=share.hidden;
   }
   preview.onload=()=>{
     if(selected){
@@ -238,7 +238,7 @@
       busy=false;
       if(version!==generation){ready();return;}
       share.hidden=panel.hidden;
-      share.disabled=share.hidden || statusKey==="attached" || !hasHandoffPath();
+      share.disabled=share.hidden || !hasHandoffPath();
     }
   }
   share.addEventListener("click",handoff);
