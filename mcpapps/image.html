@@ -1,22 +1,87 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'">
 <style>
-:root{color-scheme:light dark;font:14px system-ui,sans-serif}body{margin:0;padding:16px}img{display:block;max-width:100%;max-height:480px;object-fit:contain;margin:auto}img[hidden]{display:none}p{line-height:1.5;margin:12px 0}button{font:inherit;padding:9px 14px;border:1px solid #8886;border-radius:10px;cursor:pointer}button:disabled{opacity:.55;cursor:default}
-</style></head>
-<body><img id="preview" alt="" hidden><p id="status" role="status"></p><button id="share" hidden disabled></button>
+:root{color-scheme:light dark;font:13px/1.45 var(--font-sans,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);--ad-text-primary:var(--color-text-primary,#111);--ad-text-secondary:#555;--ad-text-muted:#777;--ad-surface:var(--color-background-primary,#fff);--ad-surface-hover:#fafafa;--ad-border:#ececec;--ad-border-strong:#d7d7d7}
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"]{color-scheme:dark;--ad-text-primary:var(--color-text-primary,#f5f5f5);--ad-text-secondary:#b7b7b7;--ad-text-muted:#969696;--ad-surface:var(--color-background-primary,#1b1b1b);--ad-surface-hover:#242424;--ad-border:#343434;--ad-border-strong:#4a4a4a}
+@media(prefers-color-scheme:dark){:root:not([data-theme]){color-scheme:dark;--ad-text-primary:var(--color-text-primary,#f5f5f5);--ad-text-secondary:#b7b7b7;--ad-text-muted:#969696;--ad-surface:var(--color-background-primary,#1b1b1b);--ad-surface-hover:#242424;--ad-border:#343434;--ad-border-strong:#4a4a4a}}
+*{box-sizing:border-box}body{margin:0;padding:0;background:transparent;color:var(--ad-text-primary)}main{background:transparent;color:var(--ad-text-primary)}
+.compact-toggle{width:100%;min-height:68px;border:0;border-radius:0;padding:11px 14px;background:transparent;color:var(--ad-text-primary);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px 12px;align-items:center;text-align:left;font:inherit;cursor:pointer}.compact-toggle:hover{background:var(--ad-surface-hover)}.compact-primary{display:flex;min-width:0;align-items:center}.compact-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.compact-end{display:flex;align-items:center;gap:8px;white-space:nowrap}.brand{font-weight:800;letter-spacing:.01em}.chevron{width:8px;height:8px;border-right:1.5px solid var(--ad-text-secondary);border-bottom:1.5px solid var(--ad-text-secondary);transform:rotate(45deg);transition:transform .15s ease;margin:-3px 2px 0 0}.compact-toggle.expanded .chevron{transform:rotate(225deg);margin:3px 2px 0 0}.compact-meta-row{grid-column:1/-1;min-width:0;color:var(--ad-text-secondary);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail-panel{border-top:1px solid var(--ad-border);padding:13px 14px 15px;background:transparent}.detail-panel[hidden]{display:none}.image-preview{display:block;max-width:100%;max-height:420px;object-fit:contain;margin:0 auto}.image-preview[hidden]{display:none}.image-actions{display:flex;justify-content:flex-end;align-items:center;margin-top:10px}.image-action{border:1px solid var(--ad-border-strong);border-radius:8px;padding:6px 10px;background:var(--ad-surface);color:var(--ad-text-primary);font:inherit;font-size:11.5px;font-weight:650;line-height:1.35;cursor:pointer}.image-action:hover:not(:disabled){background:var(--ad-surface-hover)}.image-action:focus-visible{outline:1px solid var(--ad-text-primary);outline-offset:2px}.image-action:disabled{opacity:.5;cursor:default}.image-action[hidden]{display:none}
+@media(max-width:560px){:root{font-size:12px}.compact-toggle{min-height:62px;padding:9px 11px;gap:5px 9px}.brand{display:none}.compact-title{font-size:12px;font-weight:700}.compact-meta-row{font-size:10px}.detail-panel{padding:10px 11px 12px}.image-preview{max-height:360px}.image-action{padding:5px 9px;font-size:10.5px}}
+@media(max-width:400px){:root{font-size:11.5px}.compact-toggle{min-height:58px;padding:8px 10px}.compact-title{font-size:11.5px}.compact-meta-row{font-size:10px}.detail-panel{padding:9px 10px 11px}}
+</style>
+</head>
+<body>
+<main id="shell">
+  <button id="toggle" class="compact-toggle" type="button" aria-expanded="false">
+    <span class="compact-primary"><span class="compact-title">Image</span></span>
+    <span class="compact-end"><span class="brand">AgentDock</span><span class="chevron" aria-hidden="true"></span></span>
+    <span id="metadata" class="compact-meta-row"></span>
+  </button>
+  <div id="panel" class="detail-panel" hidden>
+    <img id="preview" class="image-preview" alt="" hidden>
+    <div class="image-actions"><button id="share" class="image-action" type="button" hidden disabled></button></div>
+  </div>
+</main>
 <script>
 (() => {
-  const preview=document.getElementById("preview"), status=document.getElementById("status"), share=document.getElementById("share");
+  const shell=document.getElementById("shell");
+  const toggle=document.getElementById("toggle");
+  const metadata=document.getElementById("metadata");
+  const panel=document.getElementById("panel");
+  const preview=document.getElementById("preview");
+  const share=document.getElementById("share");
   const messages={
-    en:{alt:"Image returned by this tool",waiting:"Waiting for image",ready:"Image is ready. Confirm to provide it to the model.",share:"Let the model inspect image",retry:"Retry image handoff",previewOnly:"This client can preview the image but does not provide a model image-context channel.",toolError:"The image tool returned an error.",invalid:"No displayable image was returned, or the image exceeds 20 MB.",decodeError:"The image could not be decoded.",attaching:"Providing image to the model…",attached:"Image is available to the model.",attachError:"Image handoff failed. Retry.",modelContent:"The image returned by this AgentDock tool call is attached. Inspect the image directly instead of inferring from metadata.",followup:"Inspect the AgentDock image now available in context and answer the image question in the previous user message. If there was no specific question, briefly describe the visible content. Do not call the tool again or substitute OCR for direct image inspection."},
-    zh:{alt:"本次工具返回的图片",waiting:"等待图片",ready:"图片已就绪，确认后提供给模型。",share:"让模型查看图片",retry:"重试提供图片",previewOnly:"当前客户端可预览图片，但未提供模型图片上下文通道。",toolError:"图片工具返回错误。",invalid:"没有可显示的图片，或图片超过 20 MB。",decodeError:"图片解码失败。",attaching:"正在将图片提供给模型…",attached:"图片已提供给模型。",attachError:"提供图片失败，请重试。",modelContent:"本次 AgentDock 工具返回的图片已附加。请直接观察图片，不要依据元数据猜测。",followup:"请直接观察当前上下文中的 AgentDock 图片，回答用户上一条消息中的看图问题；若上一条没有具体问题，简要描述可见内容。不要重新调用工具或用 OCR 代替看图。"}
+    en:{
+      alt:"Image returned by this tool",
+      waiting:"Waiting for image",
+      ready:"Awaiting confirmation",
+      share:"Let model inspect image",
+      retry:"Retry image handoff",
+      previewOnly:"Preview only",
+      toolError:"Image error",
+      invalid:"Image unavailable",
+      decodeError:"Image decode failed",
+      attaching:"Providing to model…",
+      attached:"Provided to model",
+      attachError:"Handoff failed",
+      modelContent:"The image returned by this AgentDock tool call is attached. Inspect the image directly instead of inferring from metadata.",
+      followup:"Inspect the AgentDock image now available in context and answer the image question in the previous user message. If there was no specific question, briefly describe the visible content. Do not call the tool again or substitute OCR for direct image inspection."
+    },
+    zh:{
+      alt:"本次工具返回的图片",
+      waiting:"等待图片",
+      ready:"等待确认",
+      share:"让模型查看图片",
+      retry:"重试提供图片",
+      previewOnly:"仅可预览",
+      toolError:"图片错误",
+      invalid:"图片不可用",
+      decodeError:"图片解码失败",
+      attaching:"正在提供给模型…",
+      attached:"已提供给模型",
+      attachError:"提供失败",
+      modelContent:"本次 AgentDock 工具返回的图片已附加。请直接观察图片，不要依据元数据猜测。",
+      followup:"请直接观察当前上下文中的 AgentDock 图片，回答用户上一条消息中的看图问题；若上一条没有具体问题，简要描述可见内容。不要重新调用工具或用 OCR 代替看图。"
+    }
   };
-  let selected=null, busy=false, generation=0, lastImage=null, locale="en", statusKey="waiting";
-  let initialized=false, hostCapabilities={}, requestID=0;
+  const formats={"image/png":"PNG","image/jpeg":"JPEG","image/webp":"WebP","image/gif":"GIF"};
+  const systemTheme=typeof window.matchMedia==="function"?window.matchMedia("(prefers-color-scheme: dark)"):null;
+  let selected=null,busy=false,generation=0,lastImage=null,locale="en",statusKey="waiting";
+  let initialized=false,hostCapabilities={},requestID=0,hostTheme="";
   const pending=new Map();
   const t=key=>messages[locale][key];
   const notify=(method,params)=>window.parent.postMessage({jsonrpc:"2.0",method,params},"*");
+  const afterLayout=callback=>typeof window.requestAnimationFrame==="function"?window.requestAnimationFrame(callback):setTimeout(callback,0);
+  const reportSize=()=>afterLayout(()=>{
+    const height=Math.ceil(shell.getBoundingClientRect?.().height || document.body?.scrollHeight || document.documentElement.scrollHeight || 0);
+    if(height>0) notify("ui/notifications/size-changed",{height});
+  });
   const request=(method,params)=>{
     const id="agentdock-image-"+(++requestID);
     return new Promise((resolve,reject)=>{
@@ -27,32 +92,79 @@
   const supports=(name,modality)=>hostCapabilities?.[name]?.[modality]!==undefined;
   const canChatGPTAttach=()=>typeof window.openai?.uploadFile==="function" && typeof window.openai?.setWidgetState==="function";
   const hasHandoffPath=()=>supports("updateModelContext","image") || supports("message","image") || canChatGPTAttach();
+  const applyTheme=theme=>{
+    document.documentElement.dataset.theme=theme;
+    document.documentElement.style.colorScheme=theme;
+  };
+  const preferredTheme=()=>systemTheme?.matches?"dark":"light";
+  const applyHostVariables=variables=>{
+    if(!variables || typeof variables!=="object") return;
+    for(const [name,value] of Object.entries(variables)){
+      if(name.startsWith("--") && typeof value==="string") document.documentElement.style.setProperty(name,value);
+    }
+  };
+  function renderMetadata(){
+    const parts=[];
+    if(selected?.width>0 && selected?.height>0) parts.push(selected.width+" × "+selected.height);
+    if(selected?.mimeType) parts.push(formats[selected.mimeType]||selected.mimeType);
+    parts.push(t(statusKey));
+    metadata.textContent=parts.join(" · ");
+  }
   function applyLocale(value){
     if(typeof value==="string" && value) locale=value.toLowerCase().startsWith("zh")?"zh":"en";
     document.documentElement.lang=locale==="zh"?"zh-CN":"en";
-    preview.alt=t("alt"); share.textContent=t(statusKey==="attachError"?"retry":"share"); status.textContent=t(statusKey);
+    preview.alt=t("alt");
+    share.textContent=t(statusKey==="attachError"?"retry":"share");
+    renderMetadata();
+  }
+  function applyHostContext(context){
+    if(!context || typeof context!=="object") return;
+    if(context.theme==="light" || context.theme==="dark") hostTheme=context.theme;
+    if(typeof context.locale==="string" || typeof context.language==="string") applyLocale(context.locale||context.language);
+    applyHostVariables(context.styles?.variables);
+    applyTheme(hostTheme||preferredTheme());
   }
   function setStatus(key){
     statusKey=key;
-    status.textContent=t(key);
     share.textContent=t(key==="attachError"?"retry":"share");
+    renderMetadata();
+    reportSize();
   }
   function ready(){
     if(!selected || busy) return;
     if(!initialized){share.hidden=true;share.disabled=true;return;}
     if(!hasHandoffPath()){share.hidden=true;share.disabled=true;setStatus("previewOnly");return;}
     if(statusKey==="previewOnly") setStatus("ready");
-    share.hidden=statusKey==="attached";
+    share.hidden=panel.hidden || statusKey==="attached";
     share.disabled=share.hidden;
   }
+  preview.onload=()=>{
+    if(selected){
+      selected.width=Number(preview.naturalWidth)||0;
+      selected.height=Number(preview.naturalHeight)||0;
+      renderMetadata();
+      reportSize();
+    }
+  };
+  toggle.addEventListener("click",()=>{
+    const expanded=toggle.getAttribute("aria-expanded")==="true";
+    toggle.setAttribute("aria-expanded",String(!expanded));
+    toggle.classList.toggle("expanded",!expanded);
+    panel.hidden=expanded;
+    ready();
+    reportSize();
+  });
   async function receive(result){
     if(!result || !Array.isArray(result.content)) return;
-    const img=result.content.find(item=>item?.type==="image" && ["image/png","image/jpeg","image/webp","image/gif"].includes(item.mimeType));
+    const img=result.content.find(item=>item?.type==="image" && formats[item.mimeType]);
     // 宿主状态更新可能重复发布同一工具结果；重复结果只用于刷新能力，不重启传递。
     if(!result.isError && img && lastImage?.data===img.data && lastImage?.mimeType===img.mimeType){ready();return;}
     lastImage=result.isError?null:img;
     const version=++generation;
-    selected=null;preview.hidden=true;share.hidden=true;share.disabled=true;
+    selected=null;
+    preview.hidden=true;
+    share.hidden=true;
+    share.disabled=true;
     if(result.isError){setStatus("toolError");return;}
     if(!img || typeof img.data!=="string" || img.data.length>28000000){setStatus("invalid");return;}
     try{
@@ -63,11 +175,15 @@
       const key=img.mimeType+":"+Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,"0")).join("");
       const previous=window.openai?.widgetState;
       const saved=previous?.privateContent?.imageKey===key && previous?.imageIds?.length===1 ? previous.imageIds[0] : null;
-      selected={bytes,data:img.data,key,mimeType:img.mimeType,fileId:typeof saved==="string"?saved:null};
-      preview.src="data:"+img.mimeType+";base64,"+img.data;preview.hidden=false;
+      selected={bytes,data:img.data,key,mimeType:img.mimeType,fileId:typeof saved==="string"?saved:null,width:0,height:0};
+      preview.src="data:"+img.mimeType+";base64,"+img.data;
+      preview.hidden=false;
       setStatus("ready");
-      notify("ui/notifications/size-changed",{height:580});ready();
-    }catch{if(version===generation)setStatus("decodeError");}
+      ready();
+      reportSize();
+    }catch{
+      if(version===generation) setStatus("decodeError");
+    }
   }
   async function checkedRequest(method,params){
     const result=await request(method,params);
@@ -76,7 +192,9 @@
   }
   async function handoff(){
     if(busy || !selected || !initialized) return;
-    busy=true;share.hidden=false;share.disabled=true;
+    busy=true;
+    share.hidden=false;
+    share.disabled=true;
     const image=selected,version=generation;
     setStatus("attaching");
     try{
@@ -110,14 +228,16 @@
       }else if(supports("updateModelContext","image")){
         await checkedRequest("ui/update-model-context",{content:[imageBlock]});
       }else{
-        setStatus("previewOnly");return;
+        setStatus("previewOnly");
+        return;
       }
-      if(version===generation)setStatus("attached");
-    }catch{if(version===generation)setStatus("attachError");}
-    finally{
+      if(version===generation) setStatus("attached");
+    }catch{
+      if(version===generation) setStatus("attachError");
+    }finally{
       busy=false;
       if(version!==generation){ready();return;}
-      share.hidden=statusKey!=="attachError";
+      share.hidden=panel.hidden || statusKey!=="attachError";
       share.disabled=share.hidden || !hasHandoffPath();
     }
   }
@@ -140,17 +260,25 @@
       return;
     }
     if(message.method==="ui/notifications/tool-result") receive(message.params);
-    if(message.method==="ui/notifications/host-context-changed") applyLocale(message.params?.locale);
+    if(message.method==="ui/notifications/host-context-changed") applyHostContext(message.params);
     if(message.id==="image-init" && message.result){
       initialized=true;
       hostCapabilities=message.result.hostCapabilities||{};
-      applyLocale(message.result.hostContext?.locale);
+      applyHostContext(message.result.hostContext||{});
       notify("ui/notifications/initialized",{});
       ready();
     }
   });
+  if(systemTheme){
+    const onSystemThemeChange=()=>{if(!hostTheme) applyTheme(preferredTheme());};
+    if(typeof systemTheme.addEventListener==="function") systemTheme.addEventListener("change",onSystemThemeChange);
+    else if(typeof systemTheme.addListener==="function") systemTheme.addListener(onSystemThemeChange);
+  }
+  applyTheme(preferredTheme());
   applyLocale(window.openai?.locale);
   window.parent.postMessage({jsonrpc:"2.0",id:"image-init",method:"ui/initialize",params:{appInfo:{name:"agentdock-image",version:"1.0.0"},appCapabilities:{},protocolVersion:"2026-01-26"}},"*");
   fromGlobals();
 })();
-</script></body></html>
+</script>
+</body>
+</html>

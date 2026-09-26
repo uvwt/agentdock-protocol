@@ -16,17 +16,69 @@ async function waitUntil(predicate, label='condition') {
   }
 }
 
+function element(id, hidden=false) {
+  const attrs=new Map();
+  const classes=new Set();
+  return {
+    id,
+    hidden,
+    disabled:id==='share',
+    textContent:'',
+    naturalWidth:0,
+    naturalHeight:0,
+    style:{},
+    addEventListener(name,cb){this[name]=cb;},
+    setAttribute(name,value){attrs.set(name,String(value));},
+    getAttribute(name){return attrs.get(name)??null;},
+    classList:{
+      toggle(name,force){
+        const next=force===undefined?!classes.has(name):Boolean(force);
+        if(next) classes.add(name); else classes.delete(name);
+        return next;
+      },
+      contains(name){return classes.has(name);}
+    },
+    getBoundingClientRect(){return {height:68};}
+  };
+}
+
 function mount(api = {}) {
-  const events={}, elements={}, messages=[], documentElement={lang:''};
-  for (const id of ['preview','status','share']) elements[id]={hidden:id==='share',disabled:id==='share',textContent:'',addEventListener(name,cb){this[name]=cb;}};
+  const events={},messages=[];
+  const elements={
+    shell:element('shell'),
+    toggle:element('toggle'),
+    metadata:element('metadata'),
+    panel:element('panel',true),
+    preview:element('preview',true),
+    share:element('share',true)
+  };
+  elements.toggle.setAttribute('aria-expanded','false');
+  elements.shell.getBoundingClientRect=()=>({height:elements.panel.hidden?68:420});
+
+  const style={setProperty(){},colorScheme:''};
+  const documentElement={lang:'',dataset:{},style,scrollHeight:0};
   const parent={postMessage(message){messages.push(message);}};
   const win={parent,openai:api,addEventListener(name,cb){events[name]=cb;}};
-  vm.runInNewContext(source,{window:win,document:{documentElement,getElementById:id=>elements[id]},atob,Uint8Array,File,crypto:webcrypto,console,setTimeout,clearTimeout});
+  const document={
+    documentElement,
+    body:{scrollHeight:0},
+    getElementById:id=>elements[id]
+  };
+
+  vm.runInNewContext(source,{
+    window:win,document,atob,Uint8Array,File,crypto:webcrypto,console,setTimeout,clearTimeout
+  });
+
   const dispatch=data=>events.message({source:parent,data});
   return {
     elements,api,messages,documentElement,
-    initialize(hostCapabilities={},locale='en-US'){
-      dispatch({jsonrpc:'2.0',id:'image-init',result:{protocolVersion:'2026-01-26',hostCapabilities,hostInfo:{name:'test',version:'1'},hostContext:{locale}}});
+    initialize(hostCapabilities={},locale='en-US',extraContext={}){
+      dispatch({jsonrpc:'2.0',id:'image-init',result:{
+        protocolVersion:'2026-01-26',
+        hostCapabilities,
+        hostInfo:{name:'test',version:'1'},
+        hostContext:{locale,...extraContext}
+      }});
     },
     respond(requestMessage,resultValue={}){
       dispatch({jsonrpc:'2.0',id:requestMessage.id,result:resultValue});
@@ -37,19 +89,54 @@ function mount(api = {}) {
     requests(method){return messages.filter(message=>message.method===method && message.id!=='image-init');},
     globals(){events['openai:set_globals']();},
     receive(value,sender=parent){events.message({source:sender,data:{jsonrpc:'2.0',method:'ui/notifications/tool-result',params:value}});},
-    hostContext(locale){dispatch({jsonrpc:'2.0',method:'ui/notifications/host-context-changed',params:{locale}});}
+    hostContext(params){dispatch({jsonrpc:'2.0',method:'ui/notifications/host-context-changed',params});},
+    expand(){elements.toggle.click();},
+    collapse(){elements.toggle.click();}
   };
 }
 
-test('waits for user confirmation before standard model context plus ui/message handoff', async () => {
+async function loadImage(ui,value=result,width=320,height=240) {
+  ui.receive(value);
+  const expected=value.content.find(item=>item.type==='image')?.data;
+  if(expected) await waitUntil(()=>ui.elements.preview.src?.endsWith(expected),'preview');
+  ui.elements.preview.naturalWidth=width;
+  ui.elements.preview.naturalHeight=height;
+  ui.elements.preview.onload?.();
+  await new Promise(resolve=>setTimeout(resolve,1));
+}
+
+test('uses the shared compact card shape and stays folded until the user expands it', async () => {
   const ui=mount();
   ui.initialize({updateModelContext:{image:{}},message:{text:{}}});
-  ui.receive(result);
-  await waitUntil(()=>ui.elements.preview.src==='data:image/png;base64,AQID','preview');
+  await loadImage(ui);
+
+  assert.match(html,/class="compact-title">Image<\/span>/);
+  assert.match(html,/class="brand">AgentDock<\/span>/);
+  assert.equal(ui.elements.toggle.getAttribute('aria-expanded'),'false');
+  assert.equal(ui.elements.panel.hidden,true);
+  assert.equal(ui.elements.share.hidden,true);
+  assert.equal(ui.elements.metadata.textContent,'320 × 240 · PNG · Awaiting confirmation');
   assert.equal(ui.requests('ui/update-model-context').length,0);
   assert.equal(ui.requests('ui/message').length,0);
+
+  ui.expand();
+  assert.equal(ui.elements.toggle.getAttribute('aria-expanded'),'true');
+  assert.equal(ui.elements.toggle.classList.contains('expanded'),true);
+  assert.equal(ui.elements.panel.hidden,false);
   assert.equal(ui.elements.share.hidden,false);
   assert.equal(ui.elements.share.disabled,false);
+
+  ui.collapse();
+  assert.equal(ui.elements.toggle.getAttribute('aria-expanded'),'false');
+  assert.equal(ui.elements.panel.hidden,true);
+  assert.equal(ui.elements.share.hidden,true);
+});
+
+test('waits for expanded user confirmation before standard model context plus ui/message handoff', async () => {
+  const ui=mount();
+  ui.initialize({updateModelContext:{image:{}},message:{text:{}}});
+  await loadImage(ui);
+  ui.expand();
 
   const action=ui.elements.share.click();
   await waitUntil(()=>ui.requests('ui/update-model-context').length===1,'context update');
@@ -62,16 +149,17 @@ test('waits for user confirmation before standard model context plus ui/message 
   assert.equal(follow.params.content[0].type,'text');
   ui.respond(follow);
   await action;
-  assert.equal(ui.elements.status.textContent,'Image is available to the model.');
+
+  assert.equal(ui.elements.metadata.textContent,'320 × 240 · PNG · Provided to model');
   assert.equal(ui.elements.share.hidden,true);
 });
 
 test('uses direct standard image message only after user confirmation', async () => {
   const ui=mount();
   ui.initialize({message:{text:{},image:{}}});
-  ui.receive(result);
-  await waitUntil(()=>ui.elements.share.hidden===false,'confirmation button');
+  await loadImage(ui);
   assert.equal(ui.requests('ui/message').length,0);
+  ui.expand();
 
   const action=ui.elements.share.click();
   await waitUntil(()=>ui.requests('ui/message').length===1,'image message');
@@ -80,7 +168,7 @@ test('uses direct standard image message only after user confirmation', async ()
   assert.deepEqual(JSON.parse(JSON.stringify(message.params.content[1])),{type:'image',data:'AQID',mimeType:'image/png'});
   ui.respond(message);
   await action;
-  assert.equal(ui.elements.status.textContent,'Image is available to the model.');
+  assert.match(ui.elements.metadata.textContent,/Provided to model$/);
 });
 
 test('prefers standard image context over ChatGPT file upload after user confirmation', async () => {
@@ -91,11 +179,11 @@ test('prefers standard image context over ChatGPT file upload after user confirm
     sendFollowUpMessage:async()=>{follows++;}
   });
   ui.initialize({updateModelContext:{image:{}}});
-  ui.receive(result);
-  await waitUntil(()=>ui.elements.share.hidden===false,'confirmation button');
+  await loadImage(ui);
   assert.equal(ui.requests('ui/update-model-context').length,0);
   assert.equal(follows,0);
   assert.equal(uploads,0);
+  ui.expand();
 
   const action=ui.elements.share.click();
   await waitUntil(()=>ui.requests('ui/update-model-context').length===1,'context update');
@@ -113,9 +201,9 @@ test('falls back to ChatGPT file attachment only after user confirmation and wai
     sendFollowUpMessage:async()=>calls.push(['follow'])
   });
   ui.initialize({});
-  ui.receive(result);
-  await waitUntil(()=>ui.elements.share.hidden===false,'confirmation button');
+  await loadImage(ui);
   assert.deepEqual(calls,[]);
+  ui.expand();
 
   const action=ui.elements.share.click();
   await waitUntil(()=>typeof release==='function','widget state persistence');
@@ -129,12 +217,14 @@ test('falls back to ChatGPT file attachment only after user confirmation and wai
 
 test('image can arrive before initialization without starting a handoff', async () => {
   const ui=mount();
-  ui.receive(result);
-  await waitUntil(()=>ui.elements.preview.src==='data:image/png;base64,AQID','preview');
+  await loadImage(ui);
+  assert.equal(ui.elements.panel.hidden,true);
   assert.equal(ui.elements.share.hidden,true);
   assert.equal(ui.requests('ui/message').length,0);
 
   ui.initialize({message:{image:{}}});
+  assert.equal(ui.elements.share.hidden,true);
+  ui.expand();
   await waitUntil(()=>ui.elements.share.hidden===false,'post-init confirmation button');
   assert.equal(ui.requests('ui/message').length,0);
 
@@ -144,12 +234,15 @@ test('image can arrive before initialization without starting a handoff', async 
   await action;
 });
 
-test('late ChatGPT fallback exposes a confirmation button without automatic upload', async () => {
+test('late ChatGPT fallback changes folded metadata without automatic upload', async () => {
   const api={toolResponseMetadata:{mcp_tool_result:result}};
   const ui=mount(api);
   ui.initialize({});
   await waitUntil(()=>ui.elements.preview.src==='data:image/png;base64,AQID','preview');
-  assert.match(ui.elements.status.textContent,/preview/i);
+  ui.elements.preview.naturalWidth=320;
+  ui.elements.preview.naturalHeight=240;
+  ui.elements.preview.onload();
+  await waitUntil(()=>/Preview only$/.test(ui.elements.metadata.textContent),'preview-only metadata');
 
   let follows=0,uploads=0;
   api.uploadFile=async()=>{uploads++;return {fileId:'file-real'};};
@@ -157,63 +250,70 @@ test('late ChatGPT fallback exposes a confirmation button without automatic uplo
   api.sendFollowUpMessage=async()=>{follows++;};
   ui.globals();
 
-  await waitUntil(()=>ui.elements.share.hidden===false,'late confirmation button');
-  assert.equal(ui.elements.status.textContent,'Image is ready. Confirm to provide it to the model.');
+  await waitUntil(()=>/Awaiting confirmation$/.test(ui.elements.metadata.textContent),'ready metadata');
+  assert.equal(ui.elements.panel.hidden,true);
+  assert.equal(ui.elements.share.hidden,true);
   assert.equal(uploads,0);
   assert.equal(follows,0);
 
+  ui.expand();
+  await waitUntil(()=>ui.elements.share.hidden===false,'late confirmation button');
   await ui.elements.share.click();
   assert.equal(uploads,1);
   assert.equal(follows,1);
 });
 
-test('host request errors expose a retry button instead of claiming success', async () => {
+test('host request errors expose retry only inside the expanded panel', async () => {
   const ui=mount();
   ui.initialize({message:{image:{}}});
-  ui.receive(result);
-  await waitUntil(()=>ui.elements.share.hidden===false,'confirmation button');
+  await loadImage(ui);
+  ui.expand();
 
   const action=ui.elements.share.click();
   await waitUntil(()=>ui.requests('ui/message').length===1,'image message');
   ui.reject(ui.requests('ui/message')[0]);
   await action;
 
-  assert.match(ui.elements.status.textContent,/failed/i);
+  assert.match(ui.elements.metadata.textContent,/Handoff failed$/);
   assert.equal(ui.elements.share.textContent,'Retry image handoff');
   assert.equal(ui.elements.share.hidden,false);
   assert.equal(ui.elements.share.disabled,false);
+
+  ui.collapse();
+  assert.equal(ui.elements.share.hidden,true);
 });
 
-test('untrusted frames, tool errors and active content are not images', () => {
+test('untrusted frames, tool errors and active content are not images', async () => {
   const ui=mount();
   ui.initialize({});
   ui.receive(result,{});
   assert.equal(ui.elements.preview.src,undefined);
   ui.receive({isError:true,...result});
-  assert.match(ui.elements.status.textContent,/error/i);
+  await waitUntil(()=>/Image error$/.test(ui.elements.metadata.textContent),'tool error');
   ui.receive({content:[{type:'image',mimeType:'image/svg+xml',data:'AQID'}]});
+  await waitUntil(()=>/Image unavailable$/.test(ui.elements.metadata.textContent),'invalid image');
   assert.equal(ui.elements.preview.src,undefined);
 });
 
-test('switching images during fallback upload never attaches or uploads replacement pixels automatically', async () => {
+test('switching images during fallback upload never attaches replacement pixels automatically', async () => {
   const finishes=[],states=[];
   const ui=mount({
     uploadFile:()=>new Promise(resolve=>finishes.push(resolve)),
     setWidgetState:async state=>states.push(Array.from(state.imageIds))
   });
   ui.initialize({});
-  ui.receive(result);
-  await waitUntil(()=>ui.elements.share.hidden===false,'first confirmation button');
+  await loadImage(ui);
+  ui.expand();
 
   const first=ui.elements.share.click();
   await waitUntil(()=>finishes.length===1,'first upload');
-  ui.receive({content:[{type:'image',mimeType:'image/png',data:'BAUG'}]});
-  await waitUntil(()=>ui.elements.preview.src==='data:image/png;base64,BAUG','replacement image');
+  await loadImage(ui,{content:[{type:'image',mimeType:'image/png',data:'BAUG'}]},640,480);
   finishes[0]({fileId:'file-old'});
   await first;
 
   assert.deepEqual(states,[]);
   assert.equal(finishes.length,1);
+  assert.equal(ui.elements.metadata.textContent,'640 × 480 · PNG · Awaiting confirmation');
   await waitUntil(()=>ui.elements.share.hidden===false,'replacement confirmation button');
 
   const second=ui.elements.share.click();
@@ -223,22 +323,31 @@ test('switching images during fallback upload never attaches or uploads replacem
   assert.deepEqual(states,[['file-new']]);
 });
 
-test('localizes the manual confirmation UI from host context', async () => {
+test('keeps Image untranslated while localizing only status and action text', async () => {
   const ui=mount();
   ui.initialize({message:{image:{}}},'zh-CN');
-  ui.receive(result);
-  await waitUntil(()=>ui.elements.share.hidden===false,'zh confirmation button');
+  await loadImage(ui);
+
   assert.equal(ui.documentElement.lang,'zh-CN');
-  assert.equal(ui.elements.status.textContent,'图片已就绪，确认后提供给模型。');
+  assert.match(html,/class="compact-title">Image<\/span>/);
+  assert.equal(ui.elements.metadata.textContent,'320 × 240 · PNG · 等待确认');
+  assert.equal(ui.elements.panel.hidden,true);
+
+  ui.expand();
   assert.equal(ui.elements.share.textContent,'让模型查看图片');
 
-  ui.hostContext('en-US');
+  ui.hostContext({locale:'en-US'});
   assert.equal(ui.documentElement.lang,'en');
-  assert.equal(ui.elements.status.textContent,'Image is ready. Confirm to provide it to the model.');
-  assert.equal(ui.elements.share.textContent,'Let the model inspect image');
+  assert.equal(ui.elements.metadata.textContent,'320 × 240 · PNG · Awaiting confirmation');
+  assert.equal(ui.elements.share.textContent,'Let model inspect image');
 });
 
-test('ships a restrictive CSP for the shared image document', () => {
+test('ships the same transparent compact-shell styling and restrictive CSP', () => {
+  assert.match(html,/body\{margin:0;padding:0;background:transparent/);
+  assert.match(html,/\.compact-toggle\{width:100%;min-height:68px;border:0;border-radius:0/);
+  assert.match(html,/\.detail-panel\{border-top:1px solid var\(--ad-border\)/);
+  assert.doesNotMatch(html,/preview-shell/);
+  assert.doesNotMatch(html,/height:580/);
   assert.match(html,/Content-Security-Policy/);
   assert.match(html,/default-src 'none'/);
   assert.match(html,/connect-src 'none'/);
