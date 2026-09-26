@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -22,6 +24,27 @@ jobs:
         run: test -z "$(gofmt -l .)"
       - name: Tidy
         run: go mod tidy -diff
+      - name: Runtime contract generation
+        env:
+          GOPROXY: https://proxy.golang.org,direct
+          GOSUMDB: sum.golang.org
+        run: |
+          go generate ./runtimecontract/...
+          git diff --exit-code -- runtimecontract
+      - name: Runtime contract compatibility
+        if: github.event_name == 'pull_request'
+        env:
+          GOPROXY: https://proxy.golang.org,direct
+          GOSUMDB: sum.golang.org
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          for current in runtimecontract/v*/openapi.yaml; do
+            [ -f "$current" ] || continue
+            if git cat-file -e "$BASE_SHA:$current" 2>/dev/null; then
+              go run github.com/oasdiff/oasdiff@v1.32.1 breaking "$BASE_SHA:$current" "$current" --fail-on ERR
+            fi
+          done
       - name: Vet
         run: go vet ./...
       - name: Test

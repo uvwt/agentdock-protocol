@@ -1,0 +1,6 @@
+package: runtimecontractv1
+generate:
+  models: true
+output-options:
+  prefer-skip-optional-pointer: true
+  prefer-skip-optional-pointer-with-omitzero: true

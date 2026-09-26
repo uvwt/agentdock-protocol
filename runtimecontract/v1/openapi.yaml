@@ -1,0 +1,964 @@
+openapi: 3.0.3
+info:
+  title: AgentDock Runtime API Contract v1
+  version: "1"
+  description: >-
+    Transport-independent contract for AgentDock /internal/runtime APIs consumed by
+    NexusDock over either direct HTTP or the existing runtime.request Bridge operation.
+paths:
+  /internal/runtime/status:
+    get:
+      operationId: getRuntimeStatus
+      responses:
+        '200':
+          description: Runtime status and contract version.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+  /internal/runtime/tasks:
+    get:
+      operationId: listRuntimeTasks
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        '200':
+          description: Runtime task list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+  /internal/runtime/tasks/{taskID}:
+    parameters:
+      - in: path
+        name: taskID
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: getRuntimeTask
+      responses:
+        '200':
+          description: Runtime task state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetailResponse'
+    delete:
+      operationId: deleteRuntimeTask
+      responses:
+        '200':
+          description: Deleted task acknowledgement.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDeleteResponse'
+  /internal/runtime/skills:
+    get:
+      operationId: listRuntimeSkills
+      responses:
+        '200':
+          description: Installed Runtime Skill list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillListResponse'
+  /internal/runtime/skills/{skill}:
+    parameters:
+      - in: path
+        name: skill
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: skill_ref
+        schema:
+          type: string
+    get:
+      operationId: getRuntimeSkill
+      responses:
+        '200':
+          description: Runtime Skill detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillDetailResponse'
+  /internal/runtime/skills/{skill}/files:
+    parameters:
+      - in: path
+        name: skill
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: skill_ref
+        schema:
+          type: string
+    get:
+      operationId: listRuntimeSkillFiles
+      responses:
+        '200':
+          description: Runtime Skill files.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillFilesResponse'
+  /internal/runtime/skills/{skill}/files/{filePath}:
+    parameters:
+      - in: path
+        name: skill
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: filePath
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: skill_ref
+        schema:
+          type: string
+    get:
+      operationId: getRuntimeSkillFile
+      responses:
+        '200':
+          description: Runtime Skill text file.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillFileResponse'
+  /internal/runtime/plugins:
+    get:
+      operationId: listRuntimePlugins
+      responses:
+        '200':
+          description: Installed Plugin list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginListResponse'
+  /internal/runtime/plugins/{name}:
+    parameters:
+      - in: path
+        name: name
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: getRuntimePlugin
+      responses:
+        '200':
+          description: Installed Plugin detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginDetailResponse'
+  /internal/runtime/mcp:
+    get:
+      operationId: listRuntimeMCPServers
+      responses:
+        '200':
+          description: Dynamic MCP server list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MCPListResponse'
+    post:
+      operationId: manageRuntimeMCP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JSONObject'
+      responses:
+        '200':
+          description: Action-specific MCP management result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JSONObject'
+  /internal/runtime/mcp/{name}:
+    parameters:
+      - in: path
+        name: name
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: getRuntimeMCPServer
+      responses:
+        '200':
+          description: Dynamic MCP server detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MCPDetailResponse'
+components:
+  schemas:
+    JSONObject:
+      type: object
+      additionalProperties: true
+    StatusResponse:
+      type: object
+      required:
+        - ok
+        - source
+        - service
+        - version
+        - runtime_contract_version
+      properties:
+        ok:
+          type: boolean
+        source:
+          type: string
+        service:
+          type: string
+        version:
+          type: string
+        runtime_contract_version:
+          type: integer
+          minimum: 1
+        agentdock_home:
+          type: string
+          x-go-name: AgentDockHome
+        agentdock_default_dir:
+          type: string
+          x-go-name: AgentDockDefaultDir
+        path_model:
+          type: string
+        auth_enabled:
+          type: boolean
+        browser_enabled:
+          type: boolean
+        memory_enabled:
+          type: boolean
+        nexus_enabled:
+          type: boolean
+        tool_count:
+          type: integer
+          minimum: 0
+        tools:
+          type: array
+          items:
+            type: string
+    TaskStep:
+      type: object
+      required:
+        - id
+        - title
+        - status
+      properties:
+        id:
+          type: string
+          x-go-name: ID
+        title:
+          type: string
+        status:
+          type: string
+        phase:
+          type: string
+        updated_at:
+          type: string
+    TaskSummary:
+      type: object
+      required:
+        - id
+        - title
+        - goal
+        - status
+        - phase
+        - review_status
+        - completed_step_count
+        - step_count
+        - updated_at
+        - created_at
+        - event_count
+      properties:
+        id:
+          type: string
+          x-go-name: ID
+        title:
+          type: string
+        goal:
+          type: string
+        status:
+          type: string
+        phase:
+          type: string
+        review_status:
+          type: string
+        summary:
+          type: string
+        blocker:
+          type: string
+        current_step:
+          allOf:
+            - $ref: '#/components/schemas/TaskStep'
+          x-go-type-skip-optional-pointer: false
+        completed_step_count:
+          type: integer
+          minimum: 0
+        step_count:
+          type: integer
+          minimum: 0
+        updated_at:
+          type: string
+        created_at:
+          type: string
+        completed_at:
+          type: string
+        event_count:
+          type: integer
+          minimum: 0
+        source_templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/JSONObject'
+    TaskCondition:
+      type: object
+      required:
+        - id
+        - text
+        - created_at
+      properties:
+        id:
+          type: string
+          x-go-name: ID
+        text:
+          type: string
+        created_at:
+          type: string
+    TaskEvent:
+      type: object
+      required:
+        - type
+        - summary
+        - created_at
+      properties:
+        type:
+          type: string
+        summary:
+          type: string
+        created_at:
+          type: string
+    TaskFinalReview:
+      type: object
+      required:
+        - status
+        - summary
+        - review_revision
+        - reviewed_at
+      properties:
+        status:
+          type: string
+        summary:
+          type: string
+        verified_facts:
+          type: array
+          items:
+            type: string
+        open_risks:
+          type: array
+          items:
+            type: string
+        missing_checks:
+          type: array
+          items:
+            type: string
+        review_revision:
+          type: string
+        reviewed_at:
+          type: string
+    TaskState:
+      type: object
+      required:
+        - schema_version
+        - id
+        - title
+        - goal
+        - status
+        - phase
+        - conditions
+        - events
+        - created_at
+        - updated_at
+      properties:
+        schema_version:
+          type: integer
+        id:
+          type: string
+          x-go-name: ID
+        title:
+          type: string
+        goal:
+          type: string
+        project:
+          type: string
+        device:
+          type: string
+        status:
+          type: string
+        phase:
+          type: string
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskCondition'
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskStep'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskEvent'
+        blocker:
+          type: string
+        summary:
+          type: string
+        final_review:
+          allOf:
+            - $ref: '#/components/schemas/TaskFinalReview'
+          x-go-type-skip-optional-pointer: false
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        completed_at:
+          type: string
+    TaskListResponse:
+      type: object
+      required:
+        - ok
+        - source
+        - action
+        - tasks
+        - count
+      properties:
+        ok:
+          type: boolean
+        source:
+          type: string
+        action:
+          type: string
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskSummary'
+        count:
+          type: integer
+          minimum: 0
+    TaskDetailResponse:
+      type: object
+      required:
+        - ok
+        - source
+        - action
+        - task
+      properties:
+        ok:
+          type: boolean
+        source:
+          type: string
+        action:
+          type: string
+        task:
+          $ref: '#/components/schemas/TaskState'
+    TaskDeleteResponse:
+      type: object
+      required:
+        - ok
+        - source
+        - action
+        - task_id
+        - deleted_task
+      properties:
+        ok:
+          type: boolean
+        source:
+          type: string
+        action:
+          type: string
+        task_id:
+          type: string
+          x-go-name: TaskID
+        deleted_task:
+          $ref: '#/components/schemas/JSONObject'
+    SkillSummary:
+      type: object
+      required:
+        - skill
+        - name
+        - description
+        - skill_ref
+        - source_type
+        - content_digest
+        - file_count
+      properties:
+        skill:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        skill_ref:
+          type: string
+        source_type:
+          type: string
+        plugin_name:
+          type: string
+        content_digest:
+          type: string
+        file_count:
+          type: integer
+          minimum: 0
+    SkillFile:
+      type: object
+      required:
+        - path
+        - kind
+        - size_bytes
+        - updated_at
+      properties:
+        path:
+          type: string
+        kind:
+          type: string
+        size_bytes:
+          type: integer
+          format: int64
+          minimum: 0
+        updated_at:
+          type: string
+    SkillFileContent:
+      allOf:
+        - $ref: '#/components/schemas/SkillFile'
+        - type: object
+          required:
+            - content
+            - truncated
+          properties:
+            content:
+              type: string
+            truncated:
+              type: boolean
+    SkillListResponse:
+      type: object
+      required:
+        - action
+        - count
+        - skills
+        - source
+      properties:
+        action:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillSummary'
+        source:
+          type: string
+    SkillDetailResponse:
+      type: object
+      required:
+        - action
+        - skill
+        - name
+        - description
+        - skill_ref
+        - source_type
+        - content_digest
+        - document
+        - files
+        - file_count
+        - source
+      properties:
+        action:
+          type: string
+        skill:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        skill_ref:
+          type: string
+        source_type:
+          type: string
+        plugin_name:
+          type: string
+        content_digest:
+          type: string
+        document:
+          $ref: '#/components/schemas/JSONObject'
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillFile'
+        file_count:
+          type: integer
+          minimum: 0
+        source:
+          type: string
+    SkillFilesResponse:
+      type: object
+      required:
+        - action
+        - skill
+        - skill_ref
+        - content_digest
+        - files
+        - count
+        - source
+      properties:
+        action:
+          type: string
+        skill:
+          type: string
+        skill_ref:
+          type: string
+        content_digest:
+          type: string
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillFile'
+        count:
+          type: integer
+          minimum: 0
+        source:
+          type: string
+    SkillFileResponse:
+      type: object
+      required:
+        - action
+        - skill
+        - skill_ref
+        - content_digest
+        - file
+        - source
+      properties:
+        action:
+          type: string
+        skill:
+          type: string
+        skill_ref:
+          type: string
+        content_digest:
+          type: string
+        file:
+          $ref: '#/components/schemas/SkillFileContent'
+        source:
+          type: string
+    PluginProvenance:
+      type: object
+      required:
+        - origin
+      properties:
+        origin:
+          type: string
+        ref:
+          type: string
+        revision:
+          type: string
+        subdir:
+          type: string
+    PluginSummary:
+      type: object
+      required:
+        - name
+        - version
+        - enabled
+        - package_digest
+        - format
+        - skill_count
+        - mcp_count
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        enabled:
+          type: boolean
+        package_digest:
+          type: string
+        provenance:
+          allOf:
+            - $ref: '#/components/schemas/PluginProvenance'
+          x-go-type-skip-optional-pointer: false
+        format:
+          type: string
+        skill_count:
+          type: integer
+          minimum: 0
+        mcp_count:
+          type: integer
+          x-go-name: MCPCount
+          minimum: 0
+    PluginSkill:
+      type: object
+      required:
+        - name
+        - path
+        - content_digest
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        path:
+          type: string
+        content_digest:
+          type: string
+    PluginMCP:
+      type: object
+      required:
+        - name
+        - transport
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        transport:
+          type: string
+        url:
+          type: string
+          x-go-name: URL
+        command:
+          type: string
+        cwd:
+          type: string
+        runtime_name:
+          type: string
+    PluginDetail:
+      type: object
+      required:
+        - name
+        - version
+        - enabled
+        - package_digest
+        - format
+        - installed_at
+        - skills
+        - mcp
+        - executables
+        - warnings
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        enabled:
+          type: boolean
+        package_digest:
+          type: string
+        provenance:
+          allOf:
+            - $ref: '#/components/schemas/PluginProvenance'
+          x-go-type-skip-optional-pointer: false
+        format:
+          type: string
+        description:
+          type: string
+        installed_at:
+          type: string
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/PluginSkill'
+        mcp:
+          type: array
+          x-go-name: MCP
+          items:
+            $ref: '#/components/schemas/PluginMCP'
+        executables:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+    PluginListResponse:
+      type: object
+      required:
+        - ok
+        - source
+        - plugins
+        - count
+      properties:
+        ok:
+          type: boolean
+        source:
+          type: string
+        plugins:
+          type: array
+          items:
+            $ref: '#/components/schemas/PluginSummary'
+        count:
+          type: integer
+          minimum: 0
+    PluginDetailResponse:
+      type: object
+      required:
+        - ok
+        - source
+        - plugin
+      properties:
+        ok:
+          type: boolean
+        source:
+          type: string
+        action:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        enabled:
+          type: boolean
+        package_digest:
+          type: string
+        plugin:
+          $ref: '#/components/schemas/PluginDetail'
+    MCPServerSummary:
+      type: object
+      required:
+        - name
+        - description
+        - transport
+        - source_type
+        - enabled
+        - status
+        - tool_count
+      properties:
+        name:
+          type: string
+        display_name:
+          type: string
+        description:
+          type: string
+        transport:
+          type: string
+        source_type:
+          type: string
+        plugin_name:
+          type: string
+        enabled:
+          type: boolean
+        status:
+          type: string
+        tool_count:
+          type: integer
+          minimum: 0
+        last_error:
+          type: string
+        last_error_code:
+          type: string
+        refreshed_at:
+          type: string
+    MCPServerConfig:
+      type: object
+      required:
+        - name
+        - description
+        - transport
+        - enabled
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        transport:
+          type: string
+        url:
+          type: string
+          x-go-name: URL
+        command:
+          type: string
+        args:
+          type: array
+          items:
+            type: string
+        cwd:
+          type: string
+        header_env:
+          type: object
+          additionalProperties:
+            type: string
+        env_from_env:
+          type: object
+          additionalProperties:
+            type: string
+        enabled:
+          type: boolean
+        timeout_ms:
+          type: integer
+          x-go-name: TimeoutMS
+          minimum: 0
+    MCPEnvEntry:
+      type: object
+      required:
+        - key
+        - configured
+      properties:
+        key:
+          type: string
+        configured:
+          type: boolean
+    MCPListResponse:
+      type: object
+      required:
+        - ok
+        - source
+        - action
+        - servers
+        - count
+      properties:
+        ok:
+          type: boolean
+        source:
+          type: string
+        action:
+          type: string
+        servers:
+          type: array
+          items:
+            $ref: '#/components/schemas/MCPServerSummary'
+        count:
+          type: integer
+          minimum: 0
+    MCPDetailResponse:
+      type: object
+      required:
+        - ok
+        - source
+        - action
+        - server
+        - config
+      properties:
+        ok:
+          type: boolean
+        source:
+          type: string
+        action:
+          type: string
+        server:
+          $ref: '#/components/schemas/MCPServerSummary'
+        config:
+          $ref: '#/components/schemas/MCPServerConfig'
