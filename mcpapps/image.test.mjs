@@ -115,7 +115,7 @@ test('uses the shared compact card shape and stays folded until the user expands
   assert.equal(ui.elements.toggle.getAttribute('aria-expanded'),'false');
   assert.equal(ui.elements.panel.hidden,true);
   assert.equal(ui.elements.share.hidden,true);
-  assert.equal(ui.elements.metadata.textContent,'320 × 240 · PNG · Awaiting confirmation');
+  assert.equal(ui.elements.metadata.textContent,'320 × 240 · PNG · Ready to confirm');
   assert.equal(ui.requests('ui/update-model-context').length,0);
   assert.equal(ui.requests('ui/message').length,0);
 
@@ -250,7 +250,7 @@ test('late ChatGPT fallback changes folded metadata without automatic upload', a
   api.sendFollowUpMessage=async()=>{follows++;};
   ui.globals();
 
-  await waitUntil(()=>/Awaiting confirmation$/.test(ui.elements.metadata.textContent),'ready metadata');
+  await waitUntil(()=>/Ready to confirm$/.test(ui.elements.metadata.textContent),'ready metadata');
   assert.equal(ui.elements.panel.hidden,true);
   assert.equal(ui.elements.share.hidden,true);
   assert.equal(uploads,0);
@@ -313,7 +313,7 @@ test('switching images during fallback upload never attaches replacement pixels 
 
   assert.deepEqual(states,[]);
   assert.equal(finishes.length,1);
-  assert.equal(ui.elements.metadata.textContent,'640 × 480 · PNG · Awaiting confirmation');
+  assert.equal(ui.elements.metadata.textContent,'640 × 480 · PNG · Ready to confirm');
   await waitUntil(()=>ui.elements.share.hidden===false,'replacement confirmation button');
 
   const second=ui.elements.share.click();
@@ -330,7 +330,7 @@ test('keeps Image untranslated while localizing only status and action text', as
 
   assert.equal(ui.documentElement.lang,'zh-CN');
   assert.match(html,/class="compact-title">Image<\/span>/);
-  assert.equal(ui.elements.metadata.textContent,'320 × 240 · PNG · 等待确认');
+  assert.equal(ui.elements.metadata.textContent,'320 × 240 · PNG · 可确认');
   assert.equal(ui.elements.panel.hidden,true);
 
   ui.expand();
@@ -338,7 +338,7 @@ test('keeps Image untranslated while localizing only status and action text', as
 
   ui.hostContext({locale:'en-US'});
   assert.equal(ui.documentElement.lang,'en');
-  assert.equal(ui.elements.metadata.textContent,'320 × 240 · PNG · Awaiting confirmation');
+  assert.equal(ui.elements.metadata.textContent,'320 × 240 · PNG · Ready to confirm');
   assert.equal(ui.elements.share.textContent,'Let model inspect image');
 });
 
