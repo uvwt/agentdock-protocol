@@ -167,7 +167,7 @@ func TestHTMLZhCNPreservesHistoricalMixedTerminology(t *testing.T) {
 		`action_task:"TASK"`,
 		`state_pending:"pending"`,
 		`moreItems:"还有 {count} 项"`,
-		`online:"在线"`,
+		`online:"Online"`,
 		`unavailable:"不可用"`,
 		`contextUnavailable:"Context 暂不可用"`,
 	} {
