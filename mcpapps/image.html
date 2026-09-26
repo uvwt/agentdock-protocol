@@ -9,10 +9,10 @@
 (() => {
   const preview=document.getElementById("preview"), status=document.getElementById("status"), share=document.getElementById("share");
   const messages={
-    en:{alt:"Image returned by this tool",waiting:"Waiting for image",share:"Retry image handoff",previewOnly:"This client can preview the image but does not provide a model image-context channel.",toolError:"The image tool returned an error.",invalid:"No displayable image was returned, or the image exceeds 20 MB.",decodeError:"The image could not be decoded.",attaching:"Providing image to the model…",attached:"Image is available to the model.",attachError:"Automatic image handoff failed. Retry.",modelContent:"The image returned by this AgentDock tool call is attached. Inspect the image directly instead of inferring from metadata.",followup:"Inspect the AgentDock image now available in context and answer the image question in the previous user message. If there was no specific question, briefly describe the visible content. Do not call the tool again or substitute OCR for direct image inspection."},
-    zh:{alt:"本次工具返回的图片",waiting:"等待图片",share:"重试提供图片",previewOnly:"当前客户端可预览图片，但未提供模型图片上下文通道。",toolError:"图片工具返回错误。",invalid:"没有可显示的图片，或图片超过 20 MB。",decodeError:"图片解码失败。",attaching:"正在将图片提供给模型…",attached:"图片已提供给模型。",attachError:"自动提供图片失败，请重试。",modelContent:"本次 AgentDock 工具返回的图片已附加。请直接观察图片，不要依据元数据猜测。",followup:"请直接观察当前上下文中的 AgentDock 图片，回答用户上一条消息中的看图问题；若上一条没有具体问题，简要描述可见内容。不要重新调用工具或用 OCR 代替看图。"}
+    en:{alt:"Image returned by this tool",waiting:"Waiting for image",ready:"Image is ready. Confirm to provide it to the model.",share:"Let the model inspect image",retry:"Retry image handoff",previewOnly:"This client can preview the image but does not provide a model image-context channel.",toolError:"The image tool returned an error.",invalid:"No displayable image was returned, or the image exceeds 20 MB.",decodeError:"The image could not be decoded.",attaching:"Providing image to the model…",attached:"Image is available to the model.",attachError:"Image handoff failed. Retry.",modelContent:"The image returned by this AgentDock tool call is attached. Inspect the image directly instead of inferring from metadata.",followup:"Inspect the AgentDock image now available in context and answer the image question in the previous user message. If there was no specific question, briefly describe the visible content. Do not call the tool again or substitute OCR for direct image inspection."},
+    zh:{alt:"本次工具返回的图片",waiting:"等待图片",ready:"图片已就绪，确认后提供给模型。",share:"让模型查看图片",retry:"重试提供图片",previewOnly:"当前客户端可预览图片，但未提供模型图片上下文通道。",toolError:"图片工具返回错误。",invalid:"没有可显示的图片，或图片超过 20 MB。",decodeError:"图片解码失败。",attaching:"正在将图片提供给模型…",attached:"图片已提供给模型。",attachError:"提供图片失败，请重试。",modelContent:"本次 AgentDock 工具返回的图片已附加。请直接观察图片，不要依据元数据猜测。",followup:"请直接观察当前上下文中的 AgentDock 图片，回答用户上一条消息中的看图问题；若上一条没有具体问题，简要描述可见内容。不要重新调用工具或用 OCR 代替看图。"}
   };
-  let selected=null, busy=false, generation=0, autoGeneration=0, lastImage=null, locale="en", statusKey="waiting";
+  let selected=null, busy=false, generation=0, lastImage=null, locale="en", statusKey="waiting";
   let initialized=false, hostCapabilities={}, requestID=0;
   const pending=new Map();
   const t=key=>messages[locale][key];
@@ -26,21 +26,23 @@
   };
   const supports=(name,modality)=>hostCapabilities?.[name]?.[modality]!==undefined;
   const canChatGPTAttach=()=>typeof window.openai?.uploadFile==="function" && typeof window.openai?.setWidgetState==="function";
-  const hasAutomaticPath=()=>supports("updateModelContext","image") || supports("message","image") || canChatGPTAttach();
+  const hasHandoffPath=()=>supports("updateModelContext","image") || supports("message","image") || canChatGPTAttach();
   function applyLocale(value){
     if(typeof value==="string" && value) locale=value.toLowerCase().startsWith("zh")?"zh":"en";
     document.documentElement.lang=locale==="zh"?"zh-CN":"en";
-    preview.alt=t("alt"); share.textContent=t("share"); status.textContent=t(statusKey);
+    preview.alt=t("alt"); share.textContent=t(statusKey==="attachError"?"retry":"share"); status.textContent=t(statusKey);
   }
-  function setStatus(key){statusKey=key;status.textContent=t(key);}
+  function setStatus(key){
+    statusKey=key;
+    status.textContent=t(key);
+    share.textContent=t(key==="attachError"?"retry":"share");
+  }
   function ready(){
     if(!selected || busy) return;
-    if(!initialized){share.hidden=true;share.disabled=true;setStatus("waiting");return;}
-    if(!hasAutomaticPath()){share.hidden=true;share.disabled=true;setStatus("previewOnly");return;}
-    if(autoGeneration!==generation){
-      autoGeneration=generation;share.hidden=true;void handoff();return;
-    }
-    share.hidden=statusKey!=="attachError";
+    if(!initialized){share.hidden=true;share.disabled=true;return;}
+    if(!hasHandoffPath()){share.hidden=true;share.disabled=true;setStatus("previewOnly");return;}
+    if(statusKey==="previewOnly") setStatus("ready");
+    share.hidden=statusKey==="attached";
     share.disabled=share.hidden;
   }
   async function receive(result){
@@ -63,6 +65,7 @@
       const saved=previous?.privateContent?.imageKey===key && previous?.imageIds?.length===1 ? previous.imageIds[0] : null;
       selected={bytes,data:img.data,key,mimeType:img.mimeType,fileId:typeof saved==="string"?saved:null};
       preview.src="data:"+img.mimeType+";base64,"+img.data;preview.hidden=false;
+      setStatus("ready");
       notify("ui/notifications/size-changed",{height:580});ready();
     }catch{if(version===generation)setStatus("decodeError");}
   }
@@ -73,7 +76,7 @@
   }
   async function handoff(){
     if(busy || !selected || !initialized) return;
-    busy=true;share.hidden=true;share.disabled=true;
+    busy=true;share.hidden=false;share.disabled=true;
     const image=selected,version=generation;
     setStatus("attaching");
     try{
@@ -115,7 +118,7 @@
       busy=false;
       if(version!==generation){ready();return;}
       share.hidden=statusKey!=="attachError";
-      share.disabled=share.hidden || !hasAutomaticPath();
+      share.disabled=share.hidden || !hasHandoffPath();
     }
   }
   share.addEventListener("click",handoff);

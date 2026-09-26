@@ -41,10 +41,17 @@ function mount(api = {}) {
   };
 }
 
-test('uses standard model context plus ui/message for automatic image handoff', async () => {
+test('waits for user confirmation before standard model context plus ui/message handoff', async () => {
   const ui=mount();
   ui.initialize({updateModelContext:{image:{}},message:{text:{}}});
   ui.receive(result);
+  await waitUntil(()=>ui.elements.preview.src==='data:image/png;base64,AQID','preview');
+  assert.equal(ui.requests('ui/update-model-context').length,0);
+  assert.equal(ui.requests('ui/message').length,0);
+  assert.equal(ui.elements.share.hidden,false);
+  assert.equal(ui.elements.share.disabled,false);
+
+  const action=ui.elements.share.click();
   await waitUntil(()=>ui.requests('ui/update-model-context').length===1,'context update');
   const update=ui.requests('ui/update-model-context')[0];
   assert.deepEqual(JSON.parse(JSON.stringify(update.params.content)),[{type:'image',data:'AQID',mimeType:'image/png'}]);
@@ -54,23 +61,29 @@ test('uses standard model context plus ui/message for automatic image handoff', 
   assert.equal(follow.params.role,'user');
   assert.equal(follow.params.content[0].type,'text');
   ui.respond(follow);
-  await waitUntil(()=>ui.elements.status.textContent==='Image is available to the model.','handoff completion');
+  await action;
+  assert.equal(ui.elements.status.textContent,'Image is available to the model.');
   assert.equal(ui.elements.share.hidden,true);
 });
 
-test('uses direct standard image message when model-context image updates are unavailable', async () => {
+test('uses direct standard image message only after user confirmation', async () => {
   const ui=mount();
   ui.initialize({message:{text:{},image:{}}});
   ui.receive(result);
+  await waitUntil(()=>ui.elements.share.hidden===false,'confirmation button');
+  assert.equal(ui.requests('ui/message').length,0);
+
+  const action=ui.elements.share.click();
   await waitUntil(()=>ui.requests('ui/message').length===1,'image message');
   const message=ui.requests('ui/message')[0];
   assert.equal(message.params.content[0].type,'text');
   assert.deepEqual(JSON.parse(JSON.stringify(message.params.content[1])),{type:'image',data:'AQID',mimeType:'image/png'});
   ui.respond(message);
-  await waitUntil(()=>ui.elements.status.textContent==='Image is available to the model.','direct handoff completion');
+  await action;
+  assert.equal(ui.elements.status.textContent,'Image is available to the model.');
 });
 
-test('uses standard image context with ChatGPT follow-up without uploading a file', async () => {
+test('prefers standard image context over ChatGPT file upload after user confirmation', async () => {
   let follows=0,uploads=0;
   const ui=mount({
     uploadFile:async()=>{uploads++;return {fileId:'file-real'};},
@@ -79,13 +92,20 @@ test('uses standard image context with ChatGPT follow-up without uploading a fil
   });
   ui.initialize({updateModelContext:{image:{}}});
   ui.receive(result);
+  await waitUntil(()=>ui.elements.share.hidden===false,'confirmation button');
+  assert.equal(ui.requests('ui/update-model-context').length,0);
+  assert.equal(follows,0);
+  assert.equal(uploads,0);
+
+  const action=ui.elements.share.click();
   await waitUntil(()=>ui.requests('ui/update-model-context').length===1,'context update');
   ui.respond(ui.requests('ui/update-model-context')[0]);
-  await waitUntil(()=>follows===1,'ChatGPT follow-up');
+  await action;
+  assert.equal(follows,1);
   assert.equal(uploads,0);
 });
 
-test('falls back to ChatGPT file attachment and waits for widget state persistence', async () => {
+test('falls back to ChatGPT file attachment only after user confirmation and waits for widget state persistence', async () => {
   const calls=[]; let release;
   const ui=mount({
     uploadFile:async file=>{calls.push(['upload',Array.from(new Uint8Array(await file.arrayBuffer())),file.type]);return {fileId:'file-real'};},
@@ -94,45 +114,72 @@ test('falls back to ChatGPT file attachment and waits for widget state persisten
   });
   ui.initialize({});
   ui.receive(result);
+  await waitUntil(()=>ui.elements.share.hidden===false,'confirmation button');
+  assert.deepEqual(calls,[]);
+
+  const action=ui.elements.share.click();
   await waitUntil(()=>typeof release==='function','widget state persistence');
   assert.deepEqual(calls[0],['upload',[1,2,3],'image/png']);
   assert.deepEqual(calls[1],['state-start']);
   assert.equal(calls.some(c=>c[0]==='follow'),false);
   release();
-  await waitUntil(()=>calls.some(c=>c[0]==='follow'),'fallback follow-up');
+  await action;
   assert.deepEqual(calls.slice(1),[['state-start'],['state-done'],['follow']]);
 });
 
-test('automatic handoff waits for initialization and starts when capabilities arrive', async () => {
+test('image can arrive before initialization without starting a handoff', async () => {
   const ui=mount();
   ui.receive(result);
   await waitUntil(()=>ui.elements.preview.src==='data:image/png;base64,AQID','preview');
+  assert.equal(ui.elements.share.hidden,true);
   assert.equal(ui.requests('ui/message').length,0);
+
   ui.initialize({message:{image:{}}});
-  await waitUntil(()=>ui.requests('ui/message').length===1,'post-init image message');
+  await waitUntil(()=>ui.elements.share.hidden===false,'post-init confirmation button');
+  assert.equal(ui.requests('ui/message').length,0);
+
+  const action=ui.elements.share.click();
+  await waitUntil(()=>ui.requests('ui/message').length===1,'post-click image message');
+  ui.respond(ui.requests('ui/message')[0]);
+  await action;
 });
 
-test('repeated globals can activate a newly available ChatGPT fallback without duplicating the image generation', async () => {
+test('late ChatGPT fallback exposes a confirmation button without automatic upload', async () => {
   const api={toolResponseMetadata:{mcp_tool_result:result}};
   const ui=mount(api);
   ui.initialize({});
   await waitUntil(()=>ui.elements.preview.src==='data:image/png;base64,AQID','preview');
   assert.match(ui.elements.status.textContent,/preview/i);
-  let follows=0;
-  api.uploadFile=async()=>({fileId:'file-real'});
+
+  let follows=0,uploads=0;
+  api.uploadFile=async()=>{uploads++;return {fileId:'file-real'};};
   api.setWidgetState=async()=>{};
   api.sendFollowUpMessage=async()=>{follows++;};
   ui.globals();
-  await waitUntil(()=>follows===1,'late ChatGPT fallback');
+
+  await waitUntil(()=>ui.elements.share.hidden===false,'late confirmation button');
+  assert.equal(ui.elements.status.textContent,'Image is ready. Confirm to provide it to the model.');
+  assert.equal(uploads,0);
+  assert.equal(follows,0);
+
+  await ui.elements.share.click();
+  assert.equal(uploads,1);
+  assert.equal(follows,1);
 });
 
-test('host request errors expose a retry instead of claiming success', async () => {
+test('host request errors expose a retry button instead of claiming success', async () => {
   const ui=mount();
   ui.initialize({message:{image:{}}});
   ui.receive(result);
+  await waitUntil(()=>ui.elements.share.hidden===false,'confirmation button');
+
+  const action=ui.elements.share.click();
   await waitUntil(()=>ui.requests('ui/message').length===1,'image message');
   ui.reject(ui.requests('ui/message')[0]);
-  await waitUntil(()=>ui.elements.status.textContent.includes('failed'),'handoff failure');
+  await action;
+
+  assert.match(ui.elements.status.textContent,/failed/i);
+  assert.equal(ui.elements.share.textContent,'Retry image handoff');
   assert.equal(ui.elements.share.hidden,false);
   assert.equal(ui.elements.share.disabled,false);
 });
@@ -148,7 +195,7 @@ test('untrusted frames, tool errors and active content are not images', () => {
   assert.equal(ui.elements.preview.src,undefined);
 });
 
-test('switching images during fallback upload never attaches stale pixels', async () => {
+test('switching images during fallback upload never attaches or uploads replacement pixels automatically', async () => {
   const finishes=[],states=[];
   const ui=mount({
     uploadFile:()=>new Promise(resolve=>finishes.push(resolve)),
@@ -156,24 +203,39 @@ test('switching images during fallback upload never attaches stale pixels', asyn
   });
   ui.initialize({});
   ui.receive(result);
+  await waitUntil(()=>ui.elements.share.hidden===false,'first confirmation button');
+
+  const first=ui.elements.share.click();
   await waitUntil(()=>finishes.length===1,'first upload');
   ui.receive({content:[{type:'image',mimeType:'image/png',data:'BAUG'}]});
   await waitUntil(()=>ui.elements.preview.src==='data:image/png;base64,BAUG','replacement image');
   finishes[0]({fileId:'file-old'});
+  await first;
+
+  assert.deepEqual(states,[]);
+  assert.equal(finishes.length,1);
+  await waitUntil(()=>ui.elements.share.hidden===false,'replacement confirmation button');
+
+  const second=ui.elements.share.click();
   await waitUntil(()=>finishes.length===2,'replacement upload');
   finishes[1]({fileId:'file-new'});
-  await waitUntil(()=>states.length===1,'replacement state');
+  await second;
   assert.deepEqual(states,[['file-new']]);
 });
 
-test('localizes the automatic handoff UI from host context', () => {
+test('localizes the manual confirmation UI from host context', async () => {
   const ui=mount();
-  ui.initialize({},'zh-CN');
+  ui.initialize({message:{image:{}}},'zh-CN');
+  ui.receive(result);
+  await waitUntil(()=>ui.elements.share.hidden===false,'zh confirmation button');
   assert.equal(ui.documentElement.lang,'zh-CN');
-  assert.equal(ui.elements.share.textContent,'重试提供图片');
+  assert.equal(ui.elements.status.textContent,'图片已就绪，确认后提供给模型。');
+  assert.equal(ui.elements.share.textContent,'让模型查看图片');
+
   ui.hostContext('en-US');
   assert.equal(ui.documentElement.lang,'en');
-  assert.equal(ui.elements.share.textContent,'Retry image handoff');
+  assert.equal(ui.elements.status.textContent,'Image is ready. Confirm to provide it to the model.');
+  assert.equal(ui.elements.share.textContent,'Let the model inspect image');
 });
 
 test('ships a restrictive CSP for the shared image document', () => {
