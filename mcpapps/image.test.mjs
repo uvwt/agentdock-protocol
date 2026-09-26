@@ -151,7 +151,14 @@ test('waits for expanded user confirmation before standard model context plus ui
   await action;
 
   assert.equal(ui.elements.metadata.textContent,'320 × 240 · PNG · Provided to model');
+  assert.equal(ui.elements.share.hidden,false);
+  assert.equal(ui.elements.share.disabled,true);
+
+  ui.collapse();
   assert.equal(ui.elements.share.hidden,true);
+  ui.expand();
+  assert.equal(ui.elements.share.hidden,false);
+  assert.equal(ui.elements.share.disabled,true);
 });
 
 test('uses direct standard image message only after user confirmation', async () => {

@@ -135,8 +135,8 @@
     if(!initialized){share.hidden=true;share.disabled=true;return;}
     if(!hasHandoffPath()){share.hidden=true;share.disabled=true;setStatus("previewOnly");return;}
     if(statusKey==="previewOnly") setStatus("ready");
-    share.hidden=panel.hidden || statusKey==="attached";
-    share.disabled=share.hidden;
+    share.hidden=panel.hidden;
+    share.disabled=share.hidden || statusKey==="attached";
   }
   preview.onload=()=>{
     if(selected){
@@ -237,8 +237,8 @@
     }finally{
       busy=false;
       if(version!==generation){ready();return;}
-      share.hidden=panel.hidden || statusKey!=="attachError";
-      share.disabled=share.hidden || !hasHandoffPath();
+      share.hidden=panel.hidden;
+      share.disabled=share.hidden || statusKey==="attached" || !hasHandoffPath();
     }
   }
   share.addEventListener("click",handoff);
