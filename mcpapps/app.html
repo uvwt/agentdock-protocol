@@ -524,16 +524,16 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
 
     const overview=el("div","context-overview");
     appendContextOverview(overview,skills.length,t("agentDockSkills"));
-    appendContextOverview(overview,plugins.length,t("plugins"));
     appendContextOverview(overview,mcps.length,"MCP");
+    appendContextOverview(overview,plugins.length,t("plugins"));
     appendContextOverview(overview,acps.length,"ACP");
     parent.append(overview);
 
     const groups=el("div","context-groups");
     appendContextSection(groups,t("agentDockSkills"),skills,10);
     appendContextSection(groups,t("commonSkills"),commonSkills,10);
-    appendContextSection(groups,t("plugins"),plugins,8);
     appendContextSection(groups,"MCP",mcps,8);
+    appendContextSection(groups,t("plugins"),plugins,8);
     appendContextSection(groups,"ACP",acps,8);
     appendContextSection(groups,t("workflow"),workflows,8);
     parent.append(groups);
@@ -544,7 +544,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     const fragment=document.createDocumentFragment();
     const summary=appendNodeAgentContext(fragment,data);
     const compact=el("span","compact-context");
-    compact.append(contextPill(summary.skills.length,t("skills")),contextPill(summary.plugins.length,t("plugins")),contextPill(summary.mcps.length,"MCP"),contextPill(summary.workflows.length,t("workflow"),"workflow"),contextPill(summary.recall?t("on"):t("off"),t("recall")));
+    compact.append(contextPill(summary.skills.length,t("skills")),contextPill(summary.mcps.length,"MCP"),contextPill(summary.plugins.length,t("plugins")),contextPill(summary.workflows.length,t("workflow"),"workflow"),contextPill(summary.recall?t("on"):t("off"),t("recall")));
     compactShell({action:"context",title:t("capabilities")},[compact],fragment);
   }
 

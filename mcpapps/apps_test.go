@@ -125,6 +125,27 @@ func TestAgentDockContextRendersPluginsAndMultiACP(t *testing.T) {
 	if strings.Contains(html, `contextPill(summary.acps.length,"ACP")`) {
 		t.Fatal("compact AgentDock context must not show ACP")
 	}
+
+	overviewSkills := strings.Index(html, `appendContextOverview(overview,skills.length,t("agentDockSkills"))`)
+	overviewMCP := strings.Index(html, `appendContextOverview(overview,mcps.length,"MCP")`)
+	overviewPlugins := strings.Index(html, `appendContextOverview(overview,plugins.length,t("plugins"))`)
+	if overviewSkills < 0 || overviewMCP <= overviewSkills || overviewPlugins <= overviewMCP {
+		t.Fatal("AgentDock context overview order must be Skills -> MCP -> Plugins")
+	}
+
+	sectionSkills := strings.Index(html, `appendContextSection(groups,t("agentDockSkills"),skills,10)`)
+	sectionMCP := strings.Index(html, `appendContextSection(groups,"MCP",mcps,8)`)
+	sectionPlugins := strings.Index(html, `appendContextSection(groups,t("plugins"),plugins,8)`)
+	if sectionSkills < 0 || sectionMCP <= sectionSkills || sectionPlugins <= sectionMCP {
+		t.Fatal("AgentDock context section order must be Skills -> MCP -> Plugins")
+	}
+
+	compactSkills := strings.Index(html, `contextPill(summary.skills.length,t("skills"))`)
+	compactMCP := strings.Index(html, `contextPill(summary.mcps.length,"MCP")`)
+	compactPlugins := strings.Index(html, `contextPill(summary.plugins.length,t("plugins"))`)
+	if compactSkills < 0 || compactMCP <= compactSkills || compactPlugins <= compactMCP {
+		t.Fatal("compact AgentDock context order must be Skills -> MCP -> Plugins")
+	}
 }
 
 func TestWorkspaceContextRendersRulesSkillsAndPaths(t *testing.T) {
