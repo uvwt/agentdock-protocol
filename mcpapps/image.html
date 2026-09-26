@@ -38,36 +38,36 @@
   const share=document.getElementById("share");
   const messages={
     en:{
-      alt:"Image returned by this tool",
+      alt:"Image",
       waiting:"Waiting for image",
       ready:"Awaiting confirmation",
       share:"Let model inspect image",
-      retry:"Retry image handoff",
+      retry:"Try again",
       previewOnly:"Preview only",
-      toolError:"Image error",
+      toolError:"Image unavailable",
       invalid:"Image unavailable",
-      decodeError:"Image decode failed",
+      decodeError:"Image unavailable",
       attaching:"Providing to model…",
       attached:"Provided to model",
-      attachError:"Handoff failed",
-      modelContent:"The image returned by this AgentDock tool call is attached. Inspect the image directly instead of inferring from metadata.",
-      followup:"Inspect the AgentDock image now available in context and answer the image question in the previous user message. If there was no specific question, briefly describe the visible content. Do not call the tool again or substitute OCR for direct image inspection."
+      attachError:"Unable to provide image",
+      modelContent:"The image is available in the current context. Use the image itself when answering the user's request.",
+      followup:"Inspect the image in the current context and continue answering the user's request about it. If the user did not ask a specific question, briefly describe the image. Do not call view_image again."
     },
     zh:{
-      alt:"本次工具返回的图片",
+      alt:"图片",
       waiting:"等待图片",
       ready:"等待确认",
       share:"让模型查看图片",
-      retry:"重试提供图片",
+      retry:"重试",
       previewOnly:"仅可预览",
-      toolError:"图片错误",
+      toolError:"图片不可用",
       invalid:"图片不可用",
-      decodeError:"图片解码失败",
+      decodeError:"图片不可用",
       attaching:"正在提供给模型…",
       attached:"已提供给模型",
-      attachError:"提供失败",
-      modelContent:"本次 AgentDock 工具返回的图片已附加。请直接观察图片，不要依据元数据猜测。",
-      followup:"请直接观察当前上下文中的 AgentDock 图片，回答用户上一条消息中的看图问题；若上一条没有具体问题，简要描述可见内容。不要重新调用工具或用 OCR 代替看图。"
+      attachError:"无法提供图片",
+      modelContent:"图片已提供到当前上下文。回答用户请求时，请直接使用图片内容。",
+      followup:"请查看当前上下文中的图片，并继续回答用户关于这张图片的请求；如果用户没有提出具体问题，请简要描述图片内容。不要再次调用 view_image。"
     }
   };
   const formats={"image/png":"PNG","image/jpeg":"JPEG","image/webp":"WebP","image/gif":"GIF"};

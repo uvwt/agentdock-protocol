@@ -274,8 +274,8 @@ test('host request errors expose retry only inside the expanded panel', async ()
   ui.reject(ui.requests('ui/message')[0]);
   await action;
 
-  assert.match(ui.elements.metadata.textContent,/Handoff failed$/);
-  assert.equal(ui.elements.share.textContent,'Retry image handoff');
+  assert.match(ui.elements.metadata.textContent,/Unable to provide image$/);
+  assert.equal(ui.elements.share.textContent,'Try again');
   assert.equal(ui.elements.share.hidden,false);
   assert.equal(ui.elements.share.disabled,false);
 
@@ -289,7 +289,7 @@ test('untrusted frames, tool errors and active content are not images', async ()
   ui.receive(result,{});
   assert.equal(ui.elements.preview.src,undefined);
   ui.receive({isError:true,...result});
-  await waitUntil(()=>/Image error$/.test(ui.elements.metadata.textContent),'tool error');
+  await waitUntil(()=>/Image unavailable$/.test(ui.elements.metadata.textContent),'tool error');
   ui.receive({content:[{type:'image',mimeType:'image/svg+xml',data:'AQID'}]});
   await waitUntil(()=>/Image unavailable$/.test(ui.elements.metadata.textContent),'invalid image');
   assert.equal(ui.elements.preview.src,undefined);
@@ -352,4 +352,7 @@ test('ships the same transparent compact-shell styling and restrictive CSP', () 
   assert.match(html,/default-src 'none'/);
   assert.match(html,/connect-src 'none'/);
   assert.match(html,/img-src data:/);
+  assert.match(html,/modelContent:"The image is available in the current context\. Use the image itself when answering the user\'s request\."/);
+  assert.match(html,/followup:"Inspect the image in the current context and continue answering the user\'s request about it\. If the user did not ask a specific question, briefly describe the image\. Do not call view_image again\."/);
+  assert.doesNotMatch(html,/previous user message|substitute OCR|Retry image handoff|Handoff failed|Image decode failed/);
 });

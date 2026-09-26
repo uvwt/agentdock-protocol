@@ -11,8 +11,8 @@ var appHTMLTemplate string
 //go:embed image.html
 var imageHTML string
 
-// ImageResultText explains the automatic host handoff without claiming the current model turn saw pixels.
-const ImageResultText = "Image returned. The image component automatically provides the pixels to the host model context when supported."
+// ImageResultText explains that the image can be explicitly handed to the model from the Image card.
+const ImageResultText = "Image returned. Use the Image card to provide it to the model when needed."
 
 // HTML renders one shared MCP App document for a known AgentDock view.
 // View and title are internal constants owned by AgentDock/NexusDock, not user input.

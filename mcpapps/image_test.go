@@ -23,4 +23,7 @@ func TestImageViewIsSharedAndHasStableContract(t *testing.T) {
 	if strings.Contains(HTML("agentdock_context", "Context"), "image-init") {
 		t.Fatal("changed another view")
 	}
+	if strings.Contains(ImageResultText, "automatically") || !strings.Contains(ImageResultText, "Image card") {
+		t.Fatalf("ImageResultText should describe explicit card handoff: %q", ImageResultText)
+	}
 }
