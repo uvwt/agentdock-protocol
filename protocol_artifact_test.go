@@ -51,4 +51,7 @@ func TestHelloAdditiveFieldsRemainWireCompatible(t *testing.T) {
 	if message.Hello == nil || len(message.Hello.BridgeCapabilities) != 1 || message.Hello.BridgeCapabilities[0] != ArtifactReadCapability {
 		t.Fatalf("decoded hello = %#v", message.Hello)
 	}
+	if message.Hello.RuntimeContractVersion != 1 {
+		t.Fatalf("decoded runtime_contract_version = %d", message.Hello.RuntimeContractVersion)
+	}
 }

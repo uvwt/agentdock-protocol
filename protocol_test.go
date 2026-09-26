@@ -57,6 +57,9 @@ func TestHelloRoundTripKeepsUIResourcesSeparateFromToolMeta(t *testing.T) {
 	if decoded.ProtocolVersion != ConnectionProtocolVersion || decoded.Hello == nil {
 		t.Fatalf("decoded message = %#v", decoded)
 	}
+	if decoded.Hello.RuntimeContractVersion != 1 {
+		t.Fatalf("decoded runtime_contract_version = %d", decoded.Hello.RuntimeContractVersion)
+	}
 	if len(decoded.Hello.UIResources) != 1 || decoded.Hello.UIResources[0].URI != WorkflowUIResourceURI {
 		t.Fatalf("decoded ui_resources = %#v", decoded.Hello.UIResources)
 	}
