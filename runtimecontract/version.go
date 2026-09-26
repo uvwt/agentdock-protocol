@@ -1,5 +1,8 @@
 package runtimecontract
 
-// CurrentVersion is the current AgentDock Runtime wire contract implemented by this module.
-// Breaking changes require a new contract version instead of silently changing existing semantics.
-const CurrentVersion = 1
+import runtimecontractv1 "github.com/uvwt/agentdock-protocol/runtimecontract/v1"
+
+// CurrentVersion is the Runtime wire contract emitted by the current AgentDock implementation.
+// Consumers should bind to the concrete runtimecontract/vN package they actually support instead of
+// treating this moving value as proof that they understand a newer contract.
+const CurrentVersion = runtimecontractv1.Version
