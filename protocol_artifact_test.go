@@ -29,6 +29,7 @@ func TestHelloAdditiveFieldsRemainWireCompatible(t *testing.T) {
 			"device_id":"device_abcdefgh",
 			"version":"0.8.0",
 			"protocol_version":"2",
+			"runtime_contract_version":1,
 		"public_url":"https://nexus.example.test",
 			"os":"darwin",
 			"arch":"arm64",

@@ -33,10 +33,11 @@ func TestHelloRoundTripKeepsUIResourcesSeparateFromToolMeta(t *testing.T) {
 		Type:            MessageNodeHello,
 		ProtocolVersion: ConnectionProtocolVersion,
 		Hello: &Hello{
-			DeviceID:           "device_abcdefgh",
-			ProtocolVersion:    ConnectionProtocolVersion,
-			Capabilities:       []string{"read_file"},
-			BridgeCapabilities: []string{ArtifactReadCapability},
+			DeviceID:               "device_abcdefgh",
+			ProtocolVersion:        ConnectionProtocolVersion,
+			RuntimeContractVersion: 1,
+			Capabilities:           []string{"read_file"},
+			BridgeCapabilities:     []string{ArtifactReadCapability},
 			Tools: []ToolDescriptor{{
 				Name:        "workflow_template_manage",
 				InputSchema: map[string]any{"type": "object"},
