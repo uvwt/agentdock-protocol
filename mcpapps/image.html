@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<style>
+:root{color-scheme:light dark;font:13px/1.45 var(--font-sans,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);--ad-text-primary:var(--color-text-primary,#111);--ad-text-secondary:#555;--ad-text-muted:#777;--ad-surface:var(--color-background-primary,#fff);--ad-surface-hover:#fafafa;--ad-border:#ececec;--ad-border-strong:#d7d7d7}
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"]{color-scheme:dark;--ad-text-primary:var(--color-text-primary,#f5f5f5);--ad-text-secondary:#b7b7b7;--ad-text-muted:#969696;--ad-surface:var(--color-background-primary,#1b1b1b);--ad-surface-hover:#242424;--ad-border:#343434;--ad-border-strong:#4a4a4a}
+@media(prefers-color-scheme:dark){:root:not([data-theme]){color-scheme:dark;--ad-text-primary:var(--color-text-primary,#f5f5f5);--ad-text-secondary:#b7b7b7;--ad-text-muted:#969696;--ad-surface:var(--color-background-primary,#1b1b1b);--ad-surface-hover:#242424;--ad-border:#343434;--ad-border-strong:#4a4a4a}}
+*{box-sizing:border-box}body{margin:0;padding:0;background:transparent;color:var(--ad-text-primary)}main{background:transparent;color:var(--ad-text-primary)}
+.compact-toggle{width:100%;min-height:68px;border:0;border-radius:0;padding:11px 14px;background:transparent;color:var(--ad-text-primary);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px 12px;align-items:center;text-align:left;font:inherit;cursor:pointer}.compact-toggle:hover{background:var(--ad-surface-hover)}.compact-primary{display:flex;min-width:0;align-items:center}.compact-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.compact-end{display:flex;align-items:center;gap:8px;white-space:nowrap}.brand{font-weight:800;letter-spacing:.01em}.chevron{width:8px;height:8px;border-right:1.5px solid var(--ad-text-secondary);border-bottom:1.5px solid var(--ad-text-secondary);transform:rotate(45deg);transition:transform .15s ease;margin:-3px 2px 0 0}.compact-toggle.expanded .chevron{transform:rotate(225deg);margin:3px 2px 0 0}.compact-meta-row{grid-column:1/-1;min-width:0;color:var(--ad-text-secondary);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail-panel{border-top:1px solid var(--ad-border);padding:13px 14px 15px;background:transparent}.detail-panel[hidden]{display:none}.image-preview{display:block;max-width:100%;max-height:420px;object-fit:contain;margin:0 auto}.image-preview[hidden]{display:none}.image-actions{display:flex;justify-content:flex-end;align-items:center;margin-top:10px}.image-action{border:1px solid var(--ad-border-strong);border-radius:8px;padding:6px 10px;background:var(--ad-surface);color:var(--ad-text-primary);font:inherit;font-size:11.5px;font-weight:650;line-height:1.35;cursor:pointer}.image-action:hover:not(:disabled){background:var(--ad-surface-hover)}.image-action:focus-visible{outline:1px solid var(--ad-text-primary);outline-offset:2px}.image-action:disabled{opacity:.5;cursor:default}.image-action[hidden]{display:none}
+@media(max-width:560px){:root{font-size:12px}.compact-toggle{min-height:62px;padding:9px 11px;gap:5px 9px}.brand{display:none}.compact-title{font-size:12px;font-weight:700}.compact-meta-row{font-size:10px}.detail-panel{padding:10px 11px 12px}.image-preview{max-height:360px}.image-action{padding:5px 9px;font-size:10.5px}}
+@media(max-width:400px){:root{font-size:11.5px}.compact-toggle{min-height:58px;padding:8px 10px}.compact-title{font-size:11.5px}.compact-meta-row{font-size:10px}.detail-panel{padding:9px 10px 11px}}
+</style>
+</head>
+<body>
+<main id="shell">
+  <button id="toggle" class="compact-toggle" type="button" aria-expanded="false">
+    <span class="compact-primary"><span class="compact-title">Image</span></span>
+    <span class="compact-end"><span class="brand">AgentDock</span><span class="chevron" aria-hidden="true"></span></span>
+    <span id="metadata" class="compact-meta-row"></span>
+  </button>
+  <div id="panel" class="detail-panel" hidden>
+    <img id="preview" class="image-preview" alt="" hidden>
+    <div class="image-actions"><button id="share" class="image-action" type="button" hidden disabled></button></div>
+  </div>
+</main>
+<script>
+(() => {
+  const shell=document.getElementById("shell");
+  const toggle=document.getElementById("toggle");
+  const metadata=document.getElementById("metadata");
+  const panel=document.getElementById("panel");
+  const preview=document.getElementById("preview");
+  const share=document.getElementById("share");
+  const messages={
+    en:{
+      alt:"Image",
+      waiting:"Waiting for image",
+      ready:"Ready to confirm",
+      share:"Let model inspect image",
+      retry:"Try again",
+      previewOnly:"Preview only",
+      toolError:"Image unavailable",
+      invalid:"Image unavailable",
+      decodeError:"Image unavailable",
+      attaching:"Providing to model…",
+      attached:"Provided to model",
+      attachError:"Unable to provide image",
+      modelContent:"The image is available in the current context. Use the image itself when answering the user's request.",
+      followup:"Inspect the image in the current context and continue answering the user's request about it. If the user did not ask a specific question, briefly describe the image. Do not call view_image again."
+    },
+    zh:{
+      alt:"图片",
+      waiting:"等待图片",
+      ready:"可确认",
+      share:"让模型查看图片",
+      retry:"重试",
+      previewOnly:"仅可预览",
+      toolError:"图片不可用",
+      invalid:"图片不可用",
+      decodeError:"图片不可用",
+      attaching:"正在提供给模型…",
+      attached:"已提供给模型",
+      attachError:"无法提供图片",
+      modelContent:"图片已提供到当前上下文。回答用户请求时，请直接使用图片内容。",
+      followup:"请查看当前上下文中的图片，并继续回答用户关于这张图片的请求；如果用户没有提出具体问题，请简要描述图片内容。不要再次调用 view_image。"
+    }
+  };
+  const formats={"image/png":"PNG","image/jpeg":"JPEG","image/webp":"WebP","image/gif":"GIF"};
+  const systemTheme=typeof window.matchMedia==="function"?window.matchMedia("(prefers-color-scheme: dark)"):null;
+  let selected=null,busy=false,generation=0,lastImage=null,locale="en",statusKey="waiting";
+  let initialized=false,hostCapabilities={},requestID=0,hostTheme="";
+  const pending=new Map();
+  const t=key=>messages[locale][key];
+  const notify=(method,params)=>window.parent.postMessage({jsonrpc:"2.0",method,params},"*");
+  const afterLayout=callback=>typeof window.requestAnimationFrame==="function"?window.requestAnimationFrame(callback):setTimeout(callback,0);
+  const reportSize=()=>afterLayout(()=>{
+    const height=Math.ceil(shell.getBoundingClientRect?.().height || document.body?.scrollHeight || document.documentElement.scrollHeight || 0);
+    if(height>0) notify("ui/notifications/size-changed",{height});
+  });
+  const request=(method,params)=>{
+    const id="agentdock-image-"+(++requestID);
+    return new Promise((resolve,reject)=>{
+      pending.set(id,{resolve,reject});
+      window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*");
+    });
+  };
+  const supports=(name,modality)=>hostCapabilities?.[name]?.[modality]!==undefined;
+  const canChatGPTAttach=()=>typeof window.openai?.uploadFile==="function" && typeof window.openai?.setWidgetState==="function";
+  const hasHandoffPath=()=>supports("updateModelContext","image") || supports("message","image") || canChatGPTAttach();
+  const applyTheme=theme=>{
+    document.documentElement.dataset.theme=theme;
+    document.documentElement.style.colorScheme=theme;
+  };
+  const preferredTheme=()=>systemTheme?.matches?"dark":"light";
+  const applyHostVariables=variables=>{
+    if(!variables || typeof variables!=="object") return;
+    for(const [name,value] of Object.entries(variables)){
+      if(name.startsWith("--") && typeof value==="string") document.documentElement.style.setProperty(name,value);
+    }
+  };
+  function renderMetadata(){
+    const parts=[];
+    if(selected?.width>0 && selected?.height>0) parts.push(selected.width+" × "+selected.height);
+    if(selected?.mimeType) parts.push(formats[selected.mimeType]||selected.mimeType);
+    parts.push(t(statusKey));
+    metadata.textContent=parts.join(" · ");
+  }
+  function applyLocale(value){
+    if(typeof value==="string" && value) locale=value.toLowerCase().startsWith("zh")?"zh":"en";
+    document.documentElement.lang=locale==="zh"?"zh-CN":"en";
+    preview.alt=t("alt");
+    share.textContent=t(statusKey==="attachError"?"retry":"share");
+    renderMetadata();
+  }
+  function applyHostContext(context){
+    if(!context || typeof context!=="object") return;
+    if(context.theme==="light" || context.theme==="dark") hostTheme=context.theme;
+    if(typeof context.locale==="string" || typeof context.language==="string") applyLocale(context.locale||context.language);
+    applyHostVariables(context.styles?.variables);
+    applyTheme(hostTheme||preferredTheme());
+  }
+  function setStatus(key){
+    statusKey=key;
+    share.textContent=t(key==="attachError"?"retry":"share");
+    renderMetadata();
+    reportSize();
+  }
+  function ready(){
+    if(!selected || busy) return;
+    if(!initialized){share.hidden=true;share.disabled=true;return;}
+    if(!hasHandoffPath()){share.hidden=true;share.disabled=true;setStatus("previewOnly");return;}
+    if(statusKey==="previewOnly") setStatus("ready");
+    share.hidden=panel.hidden;
+    share.disabled=share.hidden;
+  }
+  preview.onload=()=>{
+    if(selected){
+      selected.width=Number(preview.naturalWidth)||0;
+      selected.height=Number(preview.naturalHeight)||0;
+      renderMetadata();
+      reportSize();
+    }
+  };
+  toggle.addEventListener("click",()=>{
+    const expanded=toggle.getAttribute("aria-expanded")==="true";
+    toggle.setAttribute("aria-expanded",String(!expanded));
+    toggle.classList.toggle("expanded",!expanded);
+    panel.hidden=expanded;
+    ready();
+    reportSize();
+  });
+  async function receive(result){
+    if(!result || !Array.isArray(result.content)) return;
+    const img=result.content.find(item=>item?.type==="image" && formats[item.mimeType]);
+    // 宿主状态更新可能重复发布同一工具结果；重复结果只用于刷新能力，不重启传递。
+    if(!result.isError && img && lastImage?.data===img.data && lastImage?.mimeType===img.mimeType){ready();return;}
+    lastImage=result.isError?null:img;
+    const version=++generation;
+    selected=null;
+    preview.hidden=true;
+    share.hidden=true;
+    share.disabled=true;
+    if(result.isError){setStatus("toolError");return;}
+    if(!img || typeof img.data!=="string" || img.data.length>28000000){setStatus("invalid");return;}
+    try{
+      const bytes=Uint8Array.from(atob(img.data),char=>char.charCodeAt(0));
+      if(!bytes.length || bytes.length>20*1024*1024) throw Error("size");
+      const digest=await crypto.subtle.digest("SHA-256",bytes);
+      if(version!==generation) return;
+      const key=img.mimeType+":"+Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,"0")).join("");
+      const previous=window.openai?.widgetState;
+      const saved=previous?.privateContent?.imageKey===key && previous?.imageIds?.length===1 ? previous.imageIds[0] : null;
+      selected={bytes,data:img.data,key,mimeType:img.mimeType,fileId:typeof saved==="string"?saved:null,width:0,height:0};
+      preview.src="data:"+img.mimeType+";base64,"+img.data;
+      preview.hidden=false;
+      setStatus("ready");
+      ready();
+      reportSize();
+    }catch{
+      if(version===generation) setStatus("decodeError");
+    }
+  }
+  async function checkedRequest(method,params){
+    const result=await request(method,params);
+    if(result?.isError) throw Error(method+" rejected");
+    return result;
+  }
+  async function handoff(){
+    if(busy || !selected || !initialized) return;
+    busy=true;
+    share.hidden=false;
+    share.disabled=true;
+    const image=selected,version=generation;
+    setStatus("attaching");
+    try{
+      const imageBlock={type:"image",data:image.data,mimeType:image.mimeType};
+      if(supports("updateModelContext","image") && supports("message","text")){
+        await checkedRequest("ui/update-model-context",{content:[imageBlock]});
+        if(version!==generation) return;
+        await checkedRequest("ui/message",{role:"user",content:[{type:"text",text:t("followup")}]});
+      }else if(supports("updateModelContext","image") && typeof window.openai?.sendFollowUpMessage==="function"){
+        await checkedRequest("ui/update-model-context",{content:[imageBlock]});
+        if(version!==generation) return;
+        await window.openai.sendFollowUpMessage({prompt:t("followup"),scrollToBottom:false});
+      }else if(supports("message","image")){
+        const content=[];
+        if(supports("message","text")) content.push({type:"text",text:t("followup")});
+        content.push(imageBlock);
+        await checkedRequest("ui/message",{role:"user",content});
+      }else if(canChatGPTAttach()){
+        if(!image.fileId){
+          const ext={"image/png":"png","image/jpeg":"jpg","image/webp":"webp","image/gif":"gif"}[image.mimeType];
+          const uploaded=await window.openai.uploadFile(new File([image.bytes],"agentdock-image."+ext,{type:image.mimeType}));
+          if(typeof uploaded?.fileId!=="string" || !uploaded.fileId) throw Error("missing file ID");
+          image.fileId=uploaded.fileId;
+        }
+        if(version!==generation) return;
+        await window.openai.setWidgetState({modelContent:t("modelContent"),privateContent:{imageKey:image.key},imageIds:[image.fileId]});
+        if(version!==generation) return;
+        if(typeof window.openai.sendFollowUpMessage==="function"){
+          await window.openai.sendFollowUpMessage({prompt:t("followup"),scrollToBottom:false});
+        }
+      }else if(supports("updateModelContext","image")){
+        await checkedRequest("ui/update-model-context",{content:[imageBlock]});
+      }else{
+        setStatus("previewOnly");
+        return;
+      }
+      if(version===generation) setStatus("attached");
+    }catch{
+      if(version===generation) setStatus("attachError");
+    }finally{
+      busy=false;
+      if(version!==generation){ready();return;}
+      share.hidden=panel.hidden;
+      share.disabled=share.hidden || !hasHandoffPath();
+    }
+  }
+  share.addEventListener("click",handoff);
+  function fromGlobals(){
+    applyLocale(window.openai?.locale);
+    const meta=window.openai?.toolResponseMetadata;
+    const result=meta?.mcp_tool_result || meta?.call_tool_result;
+    if(result) receive(result); else ready();
+  }
+  window.addEventListener("openai:set_globals",fromGlobals);
+  window.addEventListener("message",event=>{
+    if(event.source!==window.parent || event.data?.jsonrpc!=="2.0") return;
+    const message=event.data;
+    const waiter=pending.get(message.id);
+    if(waiter){
+      pending.delete(message.id);
+      if(message.error) waiter.reject(Error("host request failed"));
+      else waiter.resolve(message.result||{});
+      return;
+    }
+    if(message.method==="ui/notifications/tool-result") receive(message.params);
+    if(message.method==="ui/notifications/host-context-changed") applyHostContext(message.params);
+    if(message.id==="image-init" && message.result){
+      initialized=true;
+      hostCapabilities=message.result.hostCapabilities||{};
+      applyHostContext(message.result.hostContext||{});
+      notify("ui/notifications/initialized",{});
+      ready();
+    }
+  });
+  if(systemTheme){
+    const onSystemThemeChange=()=>{if(!hostTheme) applyTheme(preferredTheme());};
+    if(typeof systemTheme.addEventListener==="function") systemTheme.addEventListener("change",onSystemThemeChange);
+    else if(typeof systemTheme.addListener==="function") systemTheme.addListener(onSystemThemeChange);
+  }
+  applyTheme(preferredTheme());
+  applyLocale(window.openai?.locale);
+  window.parent.postMessage({jsonrpc:"2.0",id:"image-init",method:"ui/initialize",params:{appInfo:{name:"agentdock-image",version:"1.0.0"},appCapabilities:{},protocolVersion:"2026-01-26"}},"*");
+  fromGlobals();
+})();
+</script>
+</body>
+</html>

@@ -15,6 +15,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
       - name: Format
         run: test -z "$(gofmt -l .)"
       - name: Tidy
@@ -23,6 +26,8 @@ jobs:
         run: go vet ./...
       - name: Test
         run: go test ./... -count=1
+      - name: MCP Apps
+        run: node --test mcpapps/image.test.mjs
       - name: Race
         run: go test -race ./... -count=1
       - name: Build
