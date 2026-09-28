@@ -16,6 +16,7 @@ func TestUIResourceContractsAreExplicit(t *testing.T) {
 		DynamicMCPUIResourceURI:   DynamicMCPUIContract,
 		ArtifactUIResourceURI:     ArtifactUIContract,
 		ACPStatusUIResourceURI:    ACPStatusUIContract,
+		ACPPromptUIResourceURI:    ACPPromptUIContract,
 	}
 	for uri, want := range cases {
 		got, ok := UIResourceContract(uri)

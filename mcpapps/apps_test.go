@@ -209,3 +209,55 @@ func TestHTMLZhCNPreservesHistoricalMixedTerminology(t *testing.T) {
 		}
 	}
 }
+
+func TestHTMLRendersACPSessionDetailsAndHistory(t *testing.T) {
+	html := HTML("acp_status", "ACP status")
+	for _, marker := range []string{
+		`function acpHistoryMessages(events)`,
+		`function appendACPChange(container,change)`,
+		`acpChangeSummary(state.change)`,
+		`function renderACPSessionList(state,fragment)`,
+		`const isInspect=action==="inspect"`,
+		`const isNewOpen=action==="new"||action==="open"`,
+		`if(isInfo||isInspect||isNewOpen||isUpdate)`,
+		`if(isInspect){`,
+		`state.title||t("deletedSession")`,
+		`eventType==="user_message_chunk"?"user":eventType==="agent_message_chunk"?"assistant":""`,
+		`const transcript=Array.isArray(state.history_events)?acpHistoryMessages(state.history_events):null`,
+		`message.method==="ui/notifications/tool-input"`,
+		`isObject(data.remote_session)`,
+	} {
+		if !strings.Contains(html, marker) {
+			t.Fatalf("shared MCP App missing ACP transcript marker %q", marker)
+		}
+	}
+
+	for _, forbidden := range []string{
+		`{label:"protocol",value:state.protocol_version}`,
+		`{label:t("sessionInfo"),value:acpSummary(runtime.session_info)}`,
+		`{label:"profile",value:state.profile_id,mono:true}`,
+		`{label:"remote session id",value:session.remote_session_id`,
+		`{label:"auth method",value:state.auth_method_id,mono:true}`,
+	} {
+		if strings.Contains(html, forbidden) {
+			t.Fatalf("shared MCP App still exposes ACP internal detail %q", forbidden)
+		}
+	}
+}
+
+func TestHTMLRendersACPPromptActions(t *testing.T) {
+	html := HTML("acp_prompt", "ACP Prompt")
+	for _, marker := range []string{
+		`expectedView="acp_prompt"`,
+		`function renderACPPrompt(data)`,
+		`acpPromptText(lastToolInput.prompt)`,
+		`action==="events"&&transcript.length`,
+		`state.cancel_requested===true?t("cancelRequested")`,
+		`expectedView==="acp_prompt"`,
+		`renderACPPrompt(data)`,
+	} {
+		if !strings.Contains(html, marker) {
+			t.Fatalf("shared MCP App missing ACP prompt marker %q", marker)
+		}
+	}
+}

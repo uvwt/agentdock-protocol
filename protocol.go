@@ -39,6 +39,7 @@ const (
 	DynamicMCPUIResourceURI   = "ui://agentdock/dynamic-mcp"
 	ArtifactUIResourceURI     = "ui://agentdock/artifact"
 	ACPStatusUIResourceURI    = "ui://agentdock/acp-status"
+	ACPPromptUIResourceURI    = "ui://agentdock/acp-prompt"
 	ImageUIResourceURI        = "ui://agentdock/view-image/v1.html"
 )
 
@@ -52,6 +53,7 @@ const (
 	DynamicMCPUIContract   = "agentdock.dynamic-mcp.v1"
 	ArtifactUIContract     = "agentdock.artifact.v1"
 	ACPStatusUIContract    = "agentdock.acp-status.v1"
+	ACPPromptUIContract    = "agentdock.acp-prompt.v1"
 	ImageUIContract        = "agentdock.view-image.v1"
 )
 
@@ -81,6 +83,8 @@ func UIResourceContract(uri string) (string, bool) {
 		return ArtifactUIContract, true
 	case ACPStatusUIResourceURI:
 		return ACPStatusUIContract, true
+	case ACPPromptUIResourceURI:
+		return ACPPromptUIContract, true
 	default:
 		return "", false
 	}
