@@ -15,4 +15,4 @@ Neither package owns AgentDock runtime behavior, NexusDock stores, renderer HTML
 
 图片组件只处理本次工具结果，并先显示预览；只有用户点击确认按钮后才把图片提供给模型。点击后优先使用标准 MCP Apps `ui/update-model-context` / `ui/message`，宿主未暴露标准图片能力时再回退到 ChatGPT 的 `uploadFile` / `widgetState.imageIds`。未提供任何模型图片通道的客户端只显示预览；不保证同轮视觉，不读取额外文件、不默认保存到文件库，也不扩大 CSP 网络域名。
 
-验证命令：`go test ./...`、`go test -race ./...`、`go vet ./...`、`node --test mcpapps/image.test.mjs`（Node 20+）。组件上传、宿主状态更新、错误、重复点击、换图竞争及非父 frame 消息均有行为测试。真实模型识图仍须在宿主中独立验收，不能仅凭单元测试推定。
+验证命令：`go test ./...`、`go test -race ./...`、`go vet ./...`、`node --test mcpapps/app.test.mjs mcpapps/image.test.mjs`（Node 20+）。组件上传、宿主状态更新、错误、重复点击、换图竞争、ACP 会话详情与历史消息投影及非父 frame 消息均有行为测试。真实宿主交互仍须独立验收，不能仅凭单元测试推定。
