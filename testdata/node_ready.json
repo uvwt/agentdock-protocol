@@ -1,0 +1,6 @@
+{
+  "type": "node.ready",
+  "protocol_version": "2",
+  "heartbeat_ms": 30000,
+  "public_url": "https://nexus.example.com"
+}

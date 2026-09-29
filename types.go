@@ -13,7 +13,9 @@ type Message struct {
 	Hello           *Hello          `json:"hello,omitempty"`
 	ProtocolVersion string          `json:"protocol_version,omitempty"`
 	HeartbeatMS     int             `json:"heartbeat_ms,omitempty"`
-	PublicURL       string          `json:"public_url,omitempty"`
+	// PublicURL is set on MessageNodeReady: the server's public HTTPS origin without a path.
+	// Nodes derive server callback URLs from it, so servers must not require an extra path prefix.
+	PublicURL string `json:"public_url,omitempty"`
 }
 
 // Hello is the complete node capability snapshot sent at connection time.
