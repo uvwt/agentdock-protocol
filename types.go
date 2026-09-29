@@ -6,6 +6,8 @@ import "encoding/json"
 type Message struct {
 	Type            string          `json:"type"`
 	RequestID       string          `json:"request_id,omitempty"`
+	Traceparent     string          `json:"traceparent,omitempty"`
+	Tracestate      string          `json:"tracestate,omitempty"`
 	Operation       string          `json:"operation,omitempty"`
 	Arguments       json.RawMessage `json:"arguments,omitempty"`
 	Result          json.RawMessage `json:"result,omitempty"`

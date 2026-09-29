@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 )
@@ -69,5 +70,84 @@ func TestHelloRoundTripKeepsUIResourcesSeparateFromToolMeta(t *testing.T) {
 	}
 	if decoded.Hello.Tools[0].Meta != nil {
 		t.Fatalf("workflow tool unexpectedly carries static UI meta: %#v", decoded.Hello.Tools[0].Meta)
+	}
+}
+
+func TestMessageTraceContextRoundTripIsBackwardCompatible(t *testing.T) {
+	original := Message{
+		Type:        MessageToolInvoke,
+		RequestID:   "req_trace",
+		Traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+		Tracestate:  "rojo=00f067aa0ba902b7",
+		Operation:   OperationToolCall,
+		Arguments:   json.RawMessage(`{"tool":"read_file","arguments":{}}`),
+	}
+	encoded, err := json.Marshal(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded Message
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Traceparent != original.Traceparent || decoded.Tracestate != original.Tracestate {
+		t.Fatalf("trace context round trip = %q / %q", decoded.Traceparent, decoded.Tracestate)
+	}
+	if decoded.Operation != OperationToolCall || decoded.RequestID != original.RequestID {
+		t.Fatalf("existing envelope fields changed: %#v", decoded)
+	}
+}
+
+func TestMessageTraceContextFieldsRemainOptional(t *testing.T) {
+	encoded, err := json.Marshal(Message{
+		Type:      MessageToolInvoke,
+		RequestID: "req_legacy",
+		Operation: OperationToolCall,
+		Arguments: json.RawMessage(`{"tool":"read_file","arguments":{}}`),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(encoded, []byte("traceparent")) || bytes.Contains(encoded, []byte("tracestate")) {
+		t.Fatalf("optional trace fields leaked into legacy message: %s", encoded)
+	}
+
+	legacy := []byte(`{"type":"tool.invoke","request_id":"req_old","operation":"tool.call","arguments":{"tool":"read_file","arguments":{}}}`)
+	var decoded Message
+	if err := json.Unmarshal(legacy, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Traceparent != "" || decoded.Tracestate != "" {
+		t.Fatalf("legacy message unexpectedly produced trace context: %#v", decoded)
+	}
+	if decoded.RequestID != "req_old" || decoded.Operation != OperationToolCall {
+		t.Fatalf("legacy envelope changed: %#v", decoded)
+	}
+}
+
+func TestCurrentMessageFieldsAreIgnoredByLegacyDecoder(t *testing.T) {
+	type legacyMessage struct {
+		Type      string          `json:"type"`
+		RequestID string          `json:"request_id,omitempty"`
+		Operation string          `json:"operation,omitempty"`
+		Arguments json.RawMessage `json:"arguments,omitempty"`
+	}
+	encoded, err := json.Marshal(Message{
+		Type:        MessageToolInvoke,
+		RequestID:   "req_new",
+		Traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+		Tracestate:  "rojo=00f067aa0ba902b7",
+		Operation:   OperationToolCall,
+		Arguments:   json.RawMessage(`{"tool":"read_file","arguments":{}}`),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded legacyMessage
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Type != MessageToolInvoke || decoded.RequestID != "req_new" || decoded.Operation != OperationToolCall {
+		t.Fatalf("legacy decoder lost existing fields: %#v", decoded)
 	}
 }
