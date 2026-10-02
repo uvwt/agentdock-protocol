@@ -129,6 +129,15 @@ func TestRecallFactsAcceptRuntimeCoercibleValues(t *testing.T) {
 	}
 }
 
+func TestRecallWriteWarningsAreStringArray(t *testing.T) {
+	schema, _ := OutputSchema(ToolRecallWrite)
+	warnings := schema["properties"].(map[string]any)["warnings"].(map[string]any)
+	items := warnings["items"].(map[string]any)
+	if warnings["type"] != "array" || items["type"] != "string" {
+		t.Fatalf("recall_write warnings schema = %#v", warnings)
+	}
+}
+
 func TestPrivateNoteMissingEncryptedIsStringArray(t *testing.T) {
 	schema, _ := OutputSchema(ToolPrivateNoteManage)
 	missing := schema["properties"].(map[string]any)["missing_encrypted"].(map[string]any)
