@@ -39,7 +39,7 @@ func OutputSchema(name string) (map[string]any, bool) {
 		props["recall_action"] = stringProperty("Recall action used.")
 		props["recall"] = objectProperty("NexusDock Recall document returned when a write occurs.")
 		props["card"] = objectProperty("Normalized card candidate or written card when target=card.")
-		props["warnings"] = arrayObjects("Review warnings before writing.")
+		props["warnings"] = arrayStrings("Review warnings before writing.")
 		props["capture_plan"] = objectProperty("Reviewable write plan for card captures.")
 		props["similar_results"] = arrayObjects("Similar existing card search results.")
 		props["path"] = stringProperty("NexusDock Recall-relative path.")
