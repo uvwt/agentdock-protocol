@@ -1,0 +1,22 @@
+{
+  "type": "node.hello",
+  "protocol_version": "2",
+  "hello": {
+    "device_id": "device_explicit_v2",
+    "version": "0.9.2",
+    "protocol_version": "2",
+    "os": "darwin",
+    "arch": "arm64",
+    "capabilities": ["read_file"],
+    "bridge_capabilities": [
+      "bridge.capabilities.v1",
+      "bridge.context.local.v1",
+      "bridge.runtime.request.v1",
+      "bridge.resource.read.v1",
+      "bridge.artifact.read.v1"
+    ],
+    "tool_contract_hash": "",
+    "tools": [],
+    "ui_resources": []
+  }
+}

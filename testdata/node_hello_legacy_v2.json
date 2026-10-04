@@ -1,0 +1,16 @@
+{
+  "type": "node.hello",
+  "protocol_version": "2",
+  "hello": {
+    "device_id": "device_legacy_v2",
+    "version": "0.9.1",
+    "protocol_version": "2",
+    "os": "darwin",
+    "arch": "arm64",
+    "capabilities": ["read_file"],
+    "bridge_capabilities": ["bridge.artifact.read.v1"],
+    "tool_contract_hash": "",
+    "tools": [],
+    "ui_resources": []
+  }
+}
