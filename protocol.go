@@ -21,6 +21,15 @@ const (
 )
 
 const (
+	// CapabilitiesNegotiationCapability marks a node that uses explicit Bridge feature negotiation.
+	// Nodes without this marker are legacy v2 nodes and retain the historical optional-operation behavior.
+	CapabilitiesNegotiationCapability = "bridge.capabilities.v1"
+	// ContextLocalCapability advertises support for context.local.
+	ContextLocalCapability = "bridge.context.local.v1"
+	// RuntimeRequestCapability advertises support for runtime.request.
+	RuntimeRequestCapability = "bridge.runtime.request.v1"
+	// ResourceReadCapability advertises support for resource.read.
+	ResourceReadCapability = "bridge.resource.read.v1"
 	// ArtifactReadCapability is the frozen Bridge capability token for private Artifact reads.
 	ArtifactReadCapability = "bridge.artifact.read.v1"
 	// MaxArtifactChunkBytes bounds one raw Artifact chunk before JSON/base64 encoding on the Bridge.

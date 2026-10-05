@@ -15,6 +15,18 @@ func TestArtifactBridgeWireLiteralsStayStable(t *testing.T) {
 	if ArtifactReadCapability != "bridge.artifact.read.v1" {
 		t.Fatalf("ArtifactReadCapability = %q", ArtifactReadCapability)
 	}
+	if CapabilitiesNegotiationCapability != "bridge.capabilities.v1" {
+		t.Fatalf("CapabilitiesNegotiationCapability = %q", CapabilitiesNegotiationCapability)
+	}
+	if ContextLocalCapability != "bridge.context.local.v1" {
+		t.Fatalf("ContextLocalCapability = %q", ContextLocalCapability)
+	}
+	if RuntimeRequestCapability != "bridge.runtime.request.v1" {
+		t.Fatalf("RuntimeRequestCapability = %q", RuntimeRequestCapability)
+	}
+	if ResourceReadCapability != "bridge.resource.read.v1" {
+		t.Fatalf("ResourceReadCapability = %q", ResourceReadCapability)
+	}
 	if MaxArtifactChunkBytes != 512<<10 {
 		t.Fatalf("MaxArtifactChunkBytes = %d", MaxArtifactChunkBytes)
 	}

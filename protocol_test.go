@@ -3,6 +3,7 @@ package protocol
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"testing"
 )
 
@@ -71,6 +72,65 @@ func TestHelloRoundTripKeepsUIResourcesSeparateFromToolMeta(t *testing.T) {
 	if decoded.Hello.Tools[0].Meta != nil {
 		t.Fatalf("workflow tool unexpectedly carries static UI meta: %#v", decoded.Hello.Tools[0].Meta)
 	}
+}
+
+func TestHelloCapabilityNegotiationFixtures(t *testing.T) {
+	t.Run("legacy v2 hello remains valid without negotiation marker", func(t *testing.T) {
+		message := readHelloFixture(t, "testdata/node_hello_legacy_v2.json")
+		if message.ProtocolVersion != ConnectionProtocolVersion || message.Hello == nil {
+			t.Fatalf("decoded legacy hello = %#v", message)
+		}
+		if len(message.Hello.BridgeCapabilities) != 1 || message.Hello.BridgeCapabilities[0] != ArtifactReadCapability {
+			t.Fatalf("legacy bridge_capabilities = %#v", message.Hello.BridgeCapabilities)
+		}
+		for _, capability := range message.Hello.BridgeCapabilities {
+			if capability == CapabilitiesNegotiationCapability {
+				t.Fatal("legacy fixture unexpectedly opts into explicit negotiation")
+			}
+		}
+	})
+
+	t.Run("explicit v2 hello carries the full desktop capability set", func(t *testing.T) {
+		message := readHelloFixture(t, "testdata/node_hello_explicit_capabilities_v2.json")
+		if message.ProtocolVersion != ConnectionProtocolVersion || message.Hello == nil {
+			t.Fatalf("decoded explicit hello = %#v", message)
+		}
+		want := []string{
+			CapabilitiesNegotiationCapability,
+			ContextLocalCapability,
+			RuntimeRequestCapability,
+			ResourceReadCapability,
+			ArtifactReadCapability,
+		}
+		if !equalStrings(message.Hello.BridgeCapabilities, want) {
+			t.Fatalf("explicit bridge_capabilities = %#v, want %#v", message.Hello.BridgeCapabilities, want)
+		}
+	})
+}
+
+func readHelloFixture(t *testing.T, path string) Message {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var message Message
+	if err := json.Unmarshal(raw, &message); err != nil {
+		t.Fatal(err)
+	}
+	return message
+}
+
+func equalStrings(got, want []string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func TestMessageTraceContextRoundTripIsBackwardCompatible(t *testing.T) {
