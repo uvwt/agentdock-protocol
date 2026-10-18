@@ -51,7 +51,7 @@ func decodeStrict(t *testing.T, name string, target any) {
 func TestPairGoldenFixturesMatchWireShape(t *testing.T) {
 	cases := map[string][]string{
 		"pair_request.json":  {"code", "device_id", "name"},
-		"pair_response.json": {"device_token", "node", "node.id"},
+		"pair_response.json": {"device_token", "node", "node.id", "websocket_endpoint"},
 		"node_ready.json":    {"heartbeat_ms", "protocol_version", "public_url", "type"},
 	}
 	for name, want := range cases {
@@ -67,8 +67,8 @@ func TestPairGoldenFixturesMatchWireShape(t *testing.T) {
 	}
 	var response PairResponse
 	decodeStrict(t, "pair_response.json", &response)
-	if response.Node.ID == "" || response.DeviceToken == "" {
-		t.Fatalf("golden pair response lacks node identity: %#v", response)
+	if response.Node.ID == "" || response.DeviceToken == "" || response.WebSocketEndpoint != "https://ws.nexus.example.com" {
+		t.Fatalf("golden pair response lacks node identity or websocket endpoint: %#v", response)
 	}
 	var ready Message
 	decodeStrict(t, "node_ready.json", &ready)
@@ -102,6 +102,17 @@ func TestPairResponseIgnoresAdditionalServerFields(t *testing.T) {
 	}
 	if response.Node.ID != "node_1" || response.DeviceToken != "t" {
 		t.Fatalf("decoded pair response = %#v", response)
+	}
+}
+
+func TestPairResponseAllowsOmittedWebSocketEndpoint(t *testing.T) {
+	body := `{"node":{"id":"node_1"},"device_token":"t"}`
+	var response PairResponse
+	if err := json.Unmarshal([]byte(body), &response); err != nil {
+		t.Fatal(err)
+	}
+	if response.Node.ID != "node_1" || response.DeviceToken != "t" || response.WebSocketEndpoint != "" {
+		t.Fatalf("decoded legacy pair response = %#v", response)
 	}
 }
 

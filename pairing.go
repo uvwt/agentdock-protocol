@@ -39,8 +39,9 @@ type PairRequest struct {
 // PairResponse is the 201 Created body of PairPath.
 // Servers may add fields; nodes must ignore fields they do not know.
 type PairResponse struct {
-	Node        PairedNode `json:"node"`
-	DeviceToken string     `json:"device_token"`
+	Node              PairedNode `json:"node"`
+	DeviceToken       string     `json:"device_token"`
+	WebSocketEndpoint string     `json:"websocket_endpoint,omitempty"`
 }
 
 // PairedNode identifies the node record created by pairing.
