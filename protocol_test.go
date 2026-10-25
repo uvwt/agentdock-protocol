@@ -9,16 +9,17 @@ import (
 
 func TestUIResourceContractsAreExplicit(t *testing.T) {
 	cases := map[string]string{
-		ContextUIResourceURI:      ContextUIContract,
-		WorkspaceUIResourceURI:    WorkspaceUIContract,
-		TaskProgressUIResourceURI: TaskProgressUIContract,
-		FileChangeUIResourceURI:   FileChangeUIContract,
-		RecallUIResourceURI:       RecallUIContract,
-		WorkflowUIResourceURI:     WorkflowUIContract,
-		DynamicMCPUIResourceURI:   DynamicMCPUIContract,
-		ArtifactUIResourceURI:     ArtifactUIContract,
-		ACPStatusUIResourceURI:    ACPStatusUIContract,
-		ACPPromptUIResourceURI:    ACPPromptUIContract,
+		ContextUIResourceURI:            ContextUIContract,
+		WorkspaceUIResourceURI:          WorkspaceUIContract,
+		LegacyTaskProgressUIResourceURI: LegacyTaskProgressUIContract,
+		TaskProgressUIResourceURI:       TaskProgressUIContract,
+		FileChangeUIResourceURI:         FileChangeUIContract,
+		RecallUIResourceURI:             RecallUIContract,
+		WorkflowUIResourceURI:           WorkflowUIContract,
+		DynamicMCPUIResourceURI:         DynamicMCPUIContract,
+		ArtifactUIResourceURI:           ArtifactUIContract,
+		ACPStatusUIResourceURI:          ACPStatusUIContract,
+		ACPPromptUIResourceURI:          ACPPromptUIContract,
 	}
 	for uri, want := range cases {
 		got, ok := UIResourceContract(uri)

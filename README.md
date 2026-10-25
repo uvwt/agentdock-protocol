@@ -13,9 +13,11 @@ Neither package owns AgentDock runtime behavior, NexusDock stores, renderer HTML
 
 独立的 `mcpapps` 包维护两个入口复用的 UI 文档。`HTML("view_image", ...)` 返回图片组件，资源身份与兼容契约由根包的 `ImageUIResourceURI` / `ImageUIContract` 定义。图片内容仍使用标准 MCP image 块，各入口自行注册资源和绑定工具，不将执行或 HTTP 逻辑放进共享包。
 
+Task Progress v2 由 `task_create` 唯一挂载。组件保存创建结果中的 `task_id`，经 NexusDock 时同时保存原始工具输入中的 `node_id`，之后通过 `task_manage action=get` 读取同一设备上的权威任务状态。旧的 Task Progress v1 URI/contract 仅用于滚动升级期间识别旧节点，不承载新的 live-card 行为。
+
 图片组件只处理本次工具结果，并先显示预览；只有用户点击确认按钮后才把图片提供给模型。点击后优先使用标准 MCP Apps `ui/update-model-context` / `ui/message`，宿主未暴露标准图片能力时再回退到 ChatGPT 的 `uploadFile` / `widgetState.imageIds`。未提供任何模型图片通道的客户端只显示预览；不保证同轮视觉，不读取额外文件、不默认保存到文件库，也不扩大 CSP 网络域名。
 
-验证命令：`go test ./...`、`go test -race ./...`、`go vet ./...`、`node --test mcpapps/app.test.mjs mcpapps/image.test.mjs`（Node 20+）。组件上传、宿主状态更新、错误、重复点击、换图竞争、ACP 会话详情与历史消息投影及非父 frame 消息均有行为测试。真实宿主交互仍须独立验收，不能仅凭单元测试推定。
+验证命令：`go test ./...`、`go test -race ./...`、`go vet ./...`、`node --test mcpapps/app.test.mjs mcpapps/image.test.mjs mcpapps/task_live.test.mjs`（Node 20+）。组件上传、宿主状态更新、错误、重复点击、换图竞争、ACP 会话详情与历史消息投影及非父 frame 消息均有行为测试。真实宿主交互仍须独立验收，不能仅凭单元测试推定。
 
 ## 节点配对与连接
 

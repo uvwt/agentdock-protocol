@@ -39,31 +39,35 @@ const (
 const AgentDockUIResourcePrefix = "ui://agentdock/"
 
 const (
-	ContextUIResourceURI      = "ui://agentdock/context"
-	WorkspaceUIResourceURI    = "ui://agentdock/workspace-context"
-	TaskProgressUIResourceURI = "ui://agentdock/task-progress"
-	FileChangeUIResourceURI   = "ui://agentdock/file-change"
-	RecallUIResourceURI       = "ui://agentdock/recall"
-	WorkflowUIResourceURI     = "ui://agentdock/workflow"
-	DynamicMCPUIResourceURI   = "ui://agentdock/dynamic-mcp"
-	ArtifactUIResourceURI     = "ui://agentdock/artifact"
-	ACPStatusUIResourceURI    = "ui://agentdock/acp-status"
-	ACPPromptUIResourceURI    = "ui://agentdock/acp-prompt"
-	ImageUIResourceURI        = "ui://agentdock/view-image/v1.html"
+	ContextUIResourceURI   = "ui://agentdock/context"
+	WorkspaceUIResourceURI = "ui://agentdock/workspace-context"
+	// LegacyTaskProgressUIResourceURI identifies the original one-shot task renderer.
+	// Keep it known so NexusDock can relay old AgentDock nodes during rolling upgrades.
+	LegacyTaskProgressUIResourceURI = "ui://agentdock/task-progress"
+	TaskProgressUIResourceURI       = "ui://agentdock/task-progress/v2"
+	FileChangeUIResourceURI         = "ui://agentdock/file-change"
+	RecallUIResourceURI             = "ui://agentdock/recall"
+	WorkflowUIResourceURI           = "ui://agentdock/workflow"
+	DynamicMCPUIResourceURI         = "ui://agentdock/dynamic-mcp"
+	ArtifactUIResourceURI           = "ui://agentdock/artifact"
+	ACPStatusUIResourceURI          = "ui://agentdock/acp-status"
+	ACPPromptUIResourceURI          = "ui://agentdock/acp-prompt"
+	ImageUIResourceURI              = "ui://agentdock/view-image/v1.html"
 )
 
 const (
-	ContextUIContract      = "agentdock.context.fleet.v1"
-	WorkspaceUIContract    = "agentdock.workspace-context.v1"
-	TaskProgressUIContract = "agentdock.task-progress.v1"
-	FileChangeUIContract   = "agentdock.file-change.v1"
-	RecallUIContract       = "agentdock.recall.v1"
-	WorkflowUIContract     = "agentdock.workflow.v1"
-	DynamicMCPUIContract   = "agentdock.dynamic-mcp.v1"
-	ArtifactUIContract     = "agentdock.artifact.v1"
-	ACPStatusUIContract    = "agentdock.acp-status.v1"
-	ACPPromptUIContract    = "agentdock.acp-prompt.v1"
-	ImageUIContract        = "agentdock.view-image.v1"
+	ContextUIContract            = "agentdock.context.fleet.v1"
+	WorkspaceUIContract          = "agentdock.workspace-context.v1"
+	LegacyTaskProgressUIContract = "agentdock.task-progress.v1"
+	TaskProgressUIContract       = "agentdock.task-progress.v2"
+	FileChangeUIContract         = "agentdock.file-change.v1"
+	RecallUIContract             = "agentdock.recall.v1"
+	WorkflowUIContract           = "agentdock.workflow.v1"
+	DynamicMCPUIContract         = "agentdock.dynamic-mcp.v1"
+	ArtifactUIContract           = "agentdock.artifact.v1"
+	ACPStatusUIContract          = "agentdock.acp-status.v1"
+	ACPPromptUIContract          = "agentdock.acp-prompt.v1"
+	ImageUIContract              = "agentdock.view-image.v1"
 )
 
 const MCPAppMIMEType = "text/html;profile=mcp-app"
@@ -78,6 +82,8 @@ func UIResourceContract(uri string) (string, bool) {
 		return ContextUIContract, true
 	case WorkspaceUIResourceURI:
 		return WorkspaceUIContract, true
+	case LegacyTaskProgressUIResourceURI:
+		return LegacyTaskProgressUIContract, true
 	case TaskProgressUIResourceURI:
 		return TaskProgressUIContract, true
 	case FileChangeUIResourceURI:
