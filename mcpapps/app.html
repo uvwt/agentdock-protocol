@@ -39,6 +39,11 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
   let hostTheme="";
   let lastData=null;
   let lastToolInput=null;
+  let taskRefreshTimer=0;
+  let taskRefreshID="";
+  let taskRefreshNodeID="";
+  let taskRefreshBusy=false;
+  let taskRefreshGeneration=0;
   const messages={
     en:{
       waiting:"Waiting for tool output…",item:"Item",step:"Step",status:"STATUS",moreItems:"{count} more",
@@ -117,9 +122,17 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
   applyTheme(preferredTheme());
 
   const rpcNotify=(method,params)=>window.parent.postMessage({jsonrpc:"2.0",method,params:params||{}},"*");
-  const rpcRequest=(method,params)=>new Promise((resolve,reject)=>{
+  const rpcRequest=(method,params,timeoutMS=0)=>new Promise((resolve,reject)=>{
     const id=++rpcID;
-    pendingRequests.set(id,{resolve,reject});
+    let timer=0;
+    const settle=(callback,value)=>{if(timer)clearTimeout(timer);callback(value)};
+    pendingRequests.set(id,{resolve:value=>settle(resolve,value),reject:error=>settle(reject,error)});
+    if(timeoutMS>0){
+      timer=window.setTimeout(()=>{
+        if(!pendingRequests.delete(id))return;
+        reject(new Error("RPC request timed out"));
+      },timeoutMS);
+    }
     window.parent.postMessage({jsonrpc:"2.0",id,method,params:params||{}},"*");
   });
 
@@ -221,6 +234,39 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     if(isObject(data.task))return data.task;
     if(isObject(data.task_summary))return data.task_summary;
     return {};
+  }
+
+  const taskRefreshActiveDelayMS=2000;
+  const taskRefreshBlockedDelayMS=10000;
+  const taskRefreshRetryDelayMS=5000;
+  const taskRefreshRequestTimeoutMS=8000;
+
+  function taskCardAction(task){
+    return String(task.status||task.phase||"task");
+  }
+
+  function taskReview(task,data){
+    if(isObject(task.final_review))return task.final_review;
+    if(isObject(data.final_review))return data.final_review;
+    return null;
+  }
+
+  function taskRefreshCall(taskID,nodeID){
+    const args={action:"get",task_id:String(taskID||"")};
+    if(nodeID)args.node_id=String(nodeID);
+    return{name:"task_manage",arguments:args};
+  }
+
+  function taskRefreshResult(result){
+    const data=result&&result.structuredContent;
+    if(result&&result.isError===true){
+      return{kind:isObject(data)&&data.retryable===true?"retry":"stop",delay:taskRefreshRetryDelayMS};
+    }
+    if(!isObject(data))return{kind:"retry",delay:taskRefreshRetryDelayMS};
+    const task=taskRecord(data);
+    const status=String(task.status||"");
+    if(status==="completed")return{kind:"render",data,delay:0,terminal:true};
+    return{kind:"render",data,delay:status==="blocked"?taskRefreshBlockedDelayMS:taskRefreshActiveDelayMS,terminal:false};
   }
 
   function contextItems(items){
@@ -708,8 +754,10 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     const completed=Number(task.completed_step_count||0),total=Number(task.step_count||0);
     let steps=Array.isArray(task.steps)?task.steps:[];
     if(!steps.length&&isObject(task.current_step))steps=[task.current_step];
-    headline(fragment,data.action||"task",title);
-    metaLine(fragment,[stateLabel(task.status||task.phase||data.review_status),total>0?t("steps",{done:completed,total}):"",data.final_review&&data.final_review.status?t("review",{status:stateLabel(data.final_review.status)}):""]);
+    const cardAction=taskCardAction(task);
+    const review=taskReview(task,data);
+    headline(fragment,cardAction,title);
+    metaLine(fragment,[stateLabel(task.status||task.phase||data.review_status),total>0?t("steps",{done:completed,total}):"",review&&review.status?t("review",{status:stateLabel(review.status)}):""]);
     if(typeof task.summary==="string"&&task.summary)fragment.append(el("p","summary",task.summary));
     if(steps.length){const list=el("div","steps");for(const step of steps){if(!isObject(step))continue;const status=String(step.status||"pending");const statusClass=status==="in_progress"?"in-progress":status;const row=el("div","step "+statusClass);const marker=el("div","step-marker",status==="completed"?"✓":status==="in_progress"?"●":status==="blocked"?"!":"");row.append(marker);row.append(el("div","step-title",step.title||step.id||t("step")));row.append(el("div","step-status",stateLabel(status)));list.append(row)}fragment.append(list)}
     const activeStep=steps.find(step=>isObject(step)&&(step.status==="in_progress"||step.status==="blocked"))||(isObject(task.current_step)?task.current_step:null);
@@ -725,7 +773,7 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     }else if(activeStep||total>0){
       compactRows.push(el("span","compact-meta-row",[activeStep?(activeStep.title||activeStep.id||""):"",total>0?t("steps",{done:completed,total}):""].filter(Boolean).join(" · ")));
     }
-    compactShell({action:data.action||"task",title},compactRows,fragment);
+    compactShell({action:cardAction,title},compactRows,fragment);
   }
 
   function renderFileChange(data){
@@ -1070,6 +1118,71 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     requestAnimationFrame(reportSize);
   }
 
+  function taskRefreshStop(){
+    taskRefreshGeneration++;
+    if(taskRefreshTimer)clearTimeout(taskRefreshTimer);
+    taskRefreshTimer=0;
+    taskRefreshID="";
+    taskRefreshNodeID="";
+    taskRefreshBusy=false;
+  }
+
+  function taskRefreshSchedule(delay){
+    if(!taskRefreshID||document.hidden||delay<=0)return;
+    if(taskRefreshTimer)clearTimeout(taskRefreshTimer);
+    const generation=taskRefreshGeneration;
+    taskRefreshTimer=window.setTimeout(async()=>{
+      taskRefreshTimer=0;
+      if(generation!==taskRefreshGeneration||!taskRefreshID)return;
+      const nextDelay=await taskRefreshOnce();
+      if(generation===taskRefreshGeneration&&taskRefreshID&&nextDelay>0)taskRefreshSchedule(nextDelay);
+    },delay);
+  }
+
+  async function taskRefreshOnce(){
+    if(!taskRefreshID||taskRefreshBusy||document.hidden)return taskRefreshActiveDelayMS;
+    const generation=taskRefreshGeneration;
+    const taskID=taskRefreshID;
+    const nodeID=taskRefreshNodeID;
+    taskRefreshBusy=true;
+    try{
+      const result=await rpcRequest("tools/call",taskRefreshCall(taskID,nodeID),taskRefreshRequestTimeoutMS);
+      if(generation!==taskRefreshGeneration||taskID!==taskRefreshID)return 0;
+      const outcome=taskRefreshResult(result);
+      if(outcome.kind==="stop"){
+        taskRefreshStop();
+        return 0;
+      }
+      if(outcome.kind==="retry")return outcome.delay;
+      render(outcome.data);
+      if(outcome.terminal){
+        taskRefreshStop();
+        return 0;
+      }
+      return outcome.delay;
+    }catch(_){
+      if(generation!==taskRefreshGeneration)return 0;
+      return taskRefreshRetryDelayMS;
+    }finally{
+      if(generation===taskRefreshGeneration)taskRefreshBusy=false;
+    }
+  }
+
+  function taskRefreshObserve(data,input){
+    if(expectedView!=="task_progress"||data.action!=="create")return;
+    const task=taskRecord(data);
+    const taskID=String(data.task_id||task.id||"");
+    if(!taskID)return;
+    taskRefreshStop();
+    taskRefreshID=taskID;
+    taskRefreshNodeID=isObject(input)?String(input.node_id||""):"";
+    if(String(task.status||"")==="completed"){
+      taskRefreshStop();
+      return;
+    }
+    taskRefreshSchedule(700);
+  }
+
   window.addEventListener("message",event=>{
     if(event.source!==window.parent)return;
     const message=event.data;
@@ -1094,8 +1207,26 @@ pre{margin:8px 0 0;max-height:420px;overflow:auto;border-top:1px solid var(--ad-
     }
     if(message.method==="ui/notifications/tool-result"){
       const data=message.params&&message.params.structuredContent;
-      if(isObject(data))render(data);
+      if(isObject(data)){
+        render(data);
+        taskRefreshObserve(data,lastToolInput);
+      }
+      return;
     }
+    if(message.method==="ui/resource-teardown"){
+      taskRefreshStop();
+      return;
+    }
+  },{passive:true});
+
+  document.addEventListener("visibilitychange",()=>{
+    if(expectedView!=="task_progress"||!taskRefreshID)return;
+    if(document.hidden){
+      if(taskRefreshTimer)clearTimeout(taskRefreshTimer);
+      taskRefreshTimer=0;
+      return;
+    }
+    void taskRefreshOnce().then(delay=>{if(taskRefreshID&&delay>0)taskRefreshSchedule(delay)});
   },{passive:true});
 
   async function initializeBridge(){
