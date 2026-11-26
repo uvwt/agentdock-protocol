@@ -7,7 +7,6 @@ const (
 	ToolRecallRead             = "recall_read"
 	ToolRecallWrite            = "recall_write"
 	ToolRecallMaintain         = "recall_maintain"
-	ToolPrivateNoteManage      = "private_note_manage"
 	ToolWorkflowTemplateManage = "workflow_template_manage"
 )
 
@@ -18,7 +17,6 @@ var toolNames = []string{
 	ToolRecallRead,
 	ToolRecallWrite,
 	ToolRecallMaintain,
-	ToolPrivateNoteManage,
 	ToolWorkflowTemplateManage,
 }
 
@@ -48,7 +46,7 @@ func AnnotationContract(name string) (Annotations, bool) {
 	case ToolAgentDockContext, ToolWorkspaceContext, ToolRecallSearch, ToolRecallRead:
 		readOnly = true
 		destructive = false
-	case ToolRecallWrite, ToolRecallMaintain, ToolPrivateNoteManage, ToolWorkflowTemplateManage:
+	case ToolRecallWrite, ToolRecallMaintain, ToolWorkflowTemplateManage:
 	default:
 		return Annotations{}, false
 	}
