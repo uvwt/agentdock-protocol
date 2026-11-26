@@ -46,22 +46,6 @@ func InputSchema(name string) (map[string]any, bool) {
 		props["max_entries"] = integerProperty("Maximum entries to list or scan.")
 		props["max_findings"] = integerProperty("Maximum lint findings to return.")
 		props["max_results"] = integerProperty("Maximum results where supported.")
-	case ToolPrivateNoteManage:
-		props["action"] = enumProperty("NexusDock private note action. Do not use by default; use only for explicit private note access or clearly sensitive secrets, credentials, or personal information.", "search", "read", "write", "delete", "status", "maintain")
-		props["query"] = stringProperty("Metadata-only query for action=search. Matches title, summary, tags, category, and path; never searches plaintext body.")
-		props["max_results"] = boundedIntegerProperty("Maximum metadata search results to return. Defaults to 8 and is capped at 100.", 1, 100)
-		props["path"] = stringProperty("Path under notes/ for action=read, action=write, or action=delete.")
-		props["category"] = stringProperty("Optional category used with title when path is omitted. Defaults to services.")
-		props["title"] = stringProperty("Title used for frontmatter or to derive the path when path is omitted.")
-		props["summary"] = stringProperty("Optional human-maintained safe summary for metadata-only search.")
-		props["tags"] = arrayStrings("Optional safe tags for metadata-only search.")
-		props["content"] = stringProperty("Plaintext private note content for action=write.")
-		props["confirmed"] = booleanProperty("Required for true action=write and action=delete mutations.")
-		props["overwrite"] = booleanProperty("Replace an existing note for action=write.")
-		props["max_bytes"] = boundedIntegerProperty("Maximum bytes to return for explicit action=read. Defaults to 256000 and is capped at 1048576.", 1, 1048576)
-		props["status_action"] = enumProperty("Read-only status action when action=status.", "check", "list")
-		props["maintenance_action"] = enumProperty("NexusDock encryption maintenance operation when action=maintain.", "init", "init-encryption", "sync-encrypted", "encrypt-all")
-		required = []string{"action"}
 	case ToolWorkflowTemplateManage:
 		props["action"] = enumProperty("Workflow template action. publish accepts a complete template; get_many returns full active templates that the model must compose before task creation.", "publish", "retire", "list", "get", "get_many", "match", "vector_index")
 		// The root tool contract is strict, but a complete template is an intentionally open domain payload.

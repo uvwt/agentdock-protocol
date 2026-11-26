@@ -7,8 +7,8 @@ import (
 )
 
 func TestCanonicalToolContractsAreCompleteAndFresh(t *testing.T) {
-	if got := len(ToolNames()); got != 8 {
-		t.Fatalf("tool count = %d, want 8", got)
+	if got := len(ToolNames()); got != 7 {
+		t.Fatalf("tool count = %d, want 7", got)
 	}
 	for _, name := range ToolNames() {
 		input, ok := InputSchema(name)
@@ -135,15 +135,6 @@ func TestRecallWriteWarningsAreStringArray(t *testing.T) {
 	items := warnings["items"].(map[string]any)
 	if warnings["type"] != "array" || items["type"] != "string" {
 		t.Fatalf("recall_write warnings schema = %#v", warnings)
-	}
-}
-
-func TestPrivateNoteMissingEncryptedIsStringArray(t *testing.T) {
-	schema, _ := OutputSchema(ToolPrivateNoteManage)
-	missing := schema["properties"].(map[string]any)["missing_encrypted"].(map[string]any)
-	items := missing["items"].(map[string]any)
-	if missing["type"] != "array" || items["type"] != "string" {
-		t.Fatalf("missing_encrypted schema = %#v", missing)
 	}
 }
 
