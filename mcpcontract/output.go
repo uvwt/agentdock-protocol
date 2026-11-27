@@ -149,6 +149,7 @@ func FleetAgentDockContextOutputSchema() map[string]any {
 			"items": strictObject(map[string]any{
 				"node_id":      map[string]any{"type": "string"},
 				"name":         map[string]any{"type": "string"},
+				"description":  stringProperty("Optional user-authored purpose or role description of the node."),
 				"online":       map[string]any{"type": "boolean"},
 				"version":      map[string]any{"type": "string"},
 				"os":           map[string]any{"type": "string"},

@@ -182,7 +182,15 @@ func TestContextHasExplicitLocalAndFleetProfiles(t *testing.T) {
 	}
 	nodes := fleet["properties"].(map[string]any)["nodes"].(map[string]any)
 	node := nodes["items"].(map[string]any)
-	nodeContext := node["properties"].(map[string]any)["context"].(map[string]any)
+	nodeProps := node["properties"].(map[string]any)
+	nodeDescription, ok := nodeProps["description"].(map[string]any)
+	if !ok || nodeDescription["type"] != "string" {
+		t.Fatalf("fleet node description schema = %#v", nodeProps["description"])
+	}
+	if containsString(node["required"].([]string), "description") {
+		t.Fatalf("fleet node description must remain optional: %#v", node["required"])
+	}
+	nodeContext := nodeProps["context"].(map[string]any)
 	if _, ok := nodeContext["properties"].(map[string]any)["common_skills"]; !ok {
 		t.Fatal("fleet node context is missing common_skills")
 	}
